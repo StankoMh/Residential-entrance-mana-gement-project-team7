@@ -1,9 +1,10 @@
 package com.smartentrance.backend.service;
 
+import com.smartentrance.backend.exception.ResourceConflictException;
+import com.smartentrance.backend.exception.ResourceNotFoundException;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.model.enums.UserRole;
 import com.smartentrance.backend.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,7 +26,8 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = findByEmail(email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
@@ -37,7 +39,7 @@ public class UserService implements UserDetailsService {
     @Transactional
     public User createUser(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new IllegalStateException("Email already taken!");
+            throw new ResourceConflictException(User.class, "email", user.getEmail());
         }
         user.setHashedPassword(passwordEncoder.encode(user.getPassword()));
         user.setPassword(null);
@@ -49,6 +51,6 @@ public class UserService implements UserDetailsService {
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(User.class, "email", email));
     }
 }

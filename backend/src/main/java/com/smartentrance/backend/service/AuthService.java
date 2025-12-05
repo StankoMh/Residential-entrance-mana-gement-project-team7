@@ -24,7 +24,9 @@ public class AuthService {
         User userDraft = userMapper.toEntity(request);
         User savedUser = userService.createUser(userDraft);
 
-        String token = "dummy-token-" + savedUser.getId(); // TODO: implement JWT
+        String tokenType = "SHORT-TERM";
+
+        String token = "dummy-token-" + tokenType + "-" + savedUser.getId(); // TODO: implement JWT
 
         return new LoginResponse(token, userMapper.toResponse(savedUser));
     }
@@ -38,7 +40,13 @@ public class AuthService {
 
         User user = userService.findByEmail(request.getEmail());
 
-        String token = "dummy-token-" + user.getId(); // TODO: implement JWT
+        long expirationTime = request.isRememberMe()
+                ? 1000L * 60 * 60 * 24 * 7  // 7 дни (Long Term)
+                : 1000L * 60 * 60;          // 1 час (Short Term)
+
+        String tokenType = request.isRememberMe() ? "LONG-TERM" : "SHORT-TERM";
+
+        String token = "dummy-token-" + tokenType + "-" + user.getId(); // TODO: implement JWT
 
         return new LoginResponse(token, userMapper.toResponse(user));
     }
