@@ -11,3 +11,14 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: create
+  #profiles:
+    #active: dev
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET}
+      expiration: 86400000       # 1 day (Short term)
+      refresh-token: 604800000   # 7 days (Long term / Remember me)
+      cookie-name: accessToken
+      secure-cookie: false       # Set to true in production with HTTPS
