@@ -1,17 +1,21 @@
 package com.smartentrance.backend.service;
 
 import com.smartentrance.backend.exception.ResourceConflictException;
+import com.smartentrance.backend.exception.ResourceNotFoundException;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.model.enums.UserRole;
 import com.smartentrance.backend.repository.UserRepository;
 import com.smartentrance.backend.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 
 @Service
@@ -36,8 +40,15 @@ public class UserService{
         return userRepository.save(user);
     }
 
+    @Cacheable(value = "users", key = "#email")
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Transactional
+    @CacheEvict(value = "users", key = "#user.email")
+    public User save(User user) {
+        return userRepository.save(user);
     }
 
     public User getCurrentUser() {

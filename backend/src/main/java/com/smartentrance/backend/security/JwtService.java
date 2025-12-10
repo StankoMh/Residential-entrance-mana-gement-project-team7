@@ -36,7 +36,7 @@ public class JwtService {
                 .secure(secureCookie)
                 .path("/")
                 .maxAge(jwtExpiration / 1000)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
     }
 

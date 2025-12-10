@@ -1,26 +1,23 @@
 package com.smartentrance.backend.security;
 
-import com.smartentrance.backend.exception.ResourceNotFoundException;
 import com.smartentrance.backend.model.User;
-import com.smartentrance.backend.repository.UserRepository;
+import com.smartentrance.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
-
 @Service
 @RequiredArgsConstructor
 public class UserPrincipalLoader implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return Objects.requireNonNull(userRepository.findByEmail(email))
-                .map(UserPrincipal::new)
-                .orElseThrow(() -> new ResourceNotFoundException(User.class, "email", email));
+        User user = userService.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        return new UserPrincipal(user);
     }
 }
