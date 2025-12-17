@@ -1,6 +1,7 @@
 package com.smartentrance.backend.mapper;
 
 import com.smartentrance.backend.dto.building.BuildingResponse;
+import com.smartentrance.backend.dto.dashboard.ManagedBuilding;
 import com.smartentrance.backend.model.Building;
 import com.smartentrance.backend.model.User;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,15 @@ public class BuildingMapper {
                 managerFromToken.getEmail(),
                 totalUnits,
                 building.getCreatedAt()
+        );
+    }
+
+    public ManagedBuilding toManagedBuilding(Building building) {
+        return new ManagedBuilding(
+                building.getId(),
+                building.getName(),
+                building.getAddress(),
+                building.getTotalUnits()
         );
     }
 }

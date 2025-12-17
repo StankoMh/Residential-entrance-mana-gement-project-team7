@@ -7,6 +7,7 @@ import com.smartentrance.backend.model.Building;
 import com.smartentrance.backend.model.Unit;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.repository.BuildingRepository;
+import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,7 @@ public class BuildingService {
     public BuildingResponse createBuildingWithSkeleton(CreateBuildingRequest request, User manager) {
 
         if (buildingRepository.existsByGooglePlaceIdAndEntrance(request.googlePlaceId(), request.entrance().toUpperCase())) {
-            throw new IllegalStateException("Този вход на сградата вече е регистриран!");
+            throw new EntityExistsException("This building entrance is already registered.");
         }
 
         User managerProxy = userService.getUserReference(manager.getId());
@@ -58,5 +59,9 @@ public class BuildingService {
         unitService.saveAll(skeletonUnits);
 
         return buildingMapper.toResponse(building, manager, request.totalUnits());
+    }
+
+    public List<Building> findAllByManagerId(Integer managerId) {
+        return buildingRepository.findAllByManagerId(managerId);
     }
 }

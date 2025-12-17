@@ -6,6 +6,7 @@ import com.smartentrance.backend.mapper.UnitMapper;
 import com.smartentrance.backend.model.Unit;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.repository.UnitRepository;
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -27,8 +28,8 @@ public class UnitService {
         Unit unit = unitRepository.findByAccessCode(request.accessCode())
                 .orElseThrow(() -> new EntityNotFoundException("Invalid access code."));
 
-        if (unit.getResponsibleUser() != null && !unit.getResponsibleUser().getId().equals(currentUser.getId())) {
-            throw new IllegalStateException("This unit is already assigned to another user.");
+        if (unit.getResponsibleUser() != null) {
+            throw new EntityExistsException("This unit is already occupied.");
         }
 
         unit.setResponsibleUser(currentUser);
@@ -59,5 +60,8 @@ public class UnitService {
 
     public void saveAll(List<Unit> units){
         unitRepository.saveAll(units);
+    }
+    public List<Unit> findAllByResponsibleUserId(Integer userId) {
+        return unitRepository.findAllByResponsibleUserId(userId);
     }
 }
