@@ -1,4 +1,4 @@
-package com.smartentrance.backend.dto.building_event;
+package com.smartentrance.backend.dto.notice;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;

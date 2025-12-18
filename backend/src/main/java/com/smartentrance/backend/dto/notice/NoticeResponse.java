@@ -1,4 +1,4 @@
-package com.smartentrance.backend.dto.building_event;
+package com.smartentrance.backend.dto.notice;
 
 import java.time.LocalDateTime;
 

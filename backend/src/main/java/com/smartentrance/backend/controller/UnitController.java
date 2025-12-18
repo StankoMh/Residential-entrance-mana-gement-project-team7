@@ -1,6 +1,7 @@
 package com.smartentrance.backend.controller;
 
 import com.smartentrance.backend.dto.unit.JoinUnitRequest;
+import com.smartentrance.backend.dto.unit.UnitResponse;
 import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.UnitService;
 import jakarta.validation.Valid;
@@ -17,7 +18,7 @@ public class UnitController {
     private final UnitService unitService;
 
     @PostMapping("/join")
-    public ResponseEntity<?> joinUnit(
+    public ResponseEntity<UnitResponse> joinUnit(
             @Valid @RequestBody JoinUnitRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {

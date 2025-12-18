@@ -69,4 +69,8 @@ public class BuildingService {
     public Optional<Building> findById(Integer buildingId) {
         return buildingRepository.findById(buildingId);
     }
+
+    public Building getBuildingReference(Integer buildingId) {
+        return buildingRepository.getReferenceById(buildingId);
+    }
 }

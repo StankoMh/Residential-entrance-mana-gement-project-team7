@@ -43,6 +43,11 @@ public class VotesPoll {
     @ToString.Exclude
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "building_id", nullable = false)
+    @ToString.Exclude
+    private Building building;
+
     @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @ToString.Exclude

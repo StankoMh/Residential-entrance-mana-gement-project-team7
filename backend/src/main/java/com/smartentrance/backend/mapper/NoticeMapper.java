@@ -1,6 +1,6 @@
 package com.smartentrance.backend.mapper;
 
-import com.smartentrance.backend.dto.building_event.NoticeResponse;
+import com.smartentrance.backend.dto.notice.NoticeResponse;
 import com.smartentrance.backend.model.Notice;
 import org.springframework.stereotype.Component;
 
