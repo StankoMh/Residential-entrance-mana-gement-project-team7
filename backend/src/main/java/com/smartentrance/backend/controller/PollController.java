@@ -1,15 +1,13 @@
 package com.smartentrance.backend.controller;
 
 import com.smartentrance.backend.dto.enums.FilterType;
-import com.smartentrance.backend.dto.poll.CastVoteRequest;
-import com.smartentrance.backend.dto.poll.CastVoteResponse;
-import com.smartentrance.backend.dto.poll.CreatePollRequest;
-import com.smartentrance.backend.dto.poll.PollResponse;
+import com.smartentrance.backend.dto.poll.*;
 import com.smartentrance.backend.security.UserPrincipal;
-import com.smartentrance.backend.service.VoteService;
+import com.smartentrance.backend.service.PollService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,39 +15,54 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/buildings")
+@RequestMapping("/api")
 @RequiredArgsConstructor
-public class VoteController {
+public class PollController {
 
-    private final VoteService voteService;
+    private final PollService pollService;
 
-    @GetMapping("/{buildingId}/polls")
+    @GetMapping("/buildings/{buildingId}/polls")
     public ResponseEntity<List<PollResponse>> getPolls(
             @PathVariable Integer buildingId,
             @RequestParam Optional<FilterType> type
     ) {
-        return ResponseEntity.ok(voteService.getPolls(buildingId, type.orElse(FilterType.ALL)));
+        return ResponseEntity.ok(pollService.getPolls(buildingId, type.orElse(FilterType.ALL)));
     }
 
-    @PostMapping("/{buildingId}/polls")
+    @PostMapping("/buildings/{buildingId}/polls")
     public ResponseEntity<PollResponse> createPoll(
             @PathVariable Integer buildingId,
             @Valid @RequestBody CreatePollRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        PollResponse pollResponse = voteService.createPoll(buildingId, request, userPrincipal.user());
+        PollResponse pollResponse = pollService.createPoll(buildingId, request, userPrincipal.user());
         return ResponseEntity.ok(pollResponse);
     }
 
-    @PostMapping("/{buildingId}/polls/{pollId}/vote")
+    @PostMapping("/polls/{pollId}/vote")
     public ResponseEntity<CastVoteResponse> castVote(
-            @PathVariable Integer buildingId,
             @PathVariable Integer pollId,
             @Valid @RequestBody CastVoteRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         return ResponseEntity.ok(
-                voteService.castVote(buildingId, pollId, request, userPrincipal.user())
+                pollService.castVote(pollId, request, userPrincipal.user())
         );
+    }
+
+    @DeleteMapping("/polls/{pollId}")
+    public ResponseEntity<Void> deletePoll(
+            @PathVariable Integer pollId
+    ) {
+        pollService.deletePoll(pollId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/polls/{pollId}")
+    public ResponseEntity<PollResponse> updatePoll(
+            @PathVariable Integer pollId,
+            @Valid @RequestBody UpdatePollRequest request
+    ) {
+        return ResponseEntity.ok(pollService.updatePoll(pollId, request));
     }
 }

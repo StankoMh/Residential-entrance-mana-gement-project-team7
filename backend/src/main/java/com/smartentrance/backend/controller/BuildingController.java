@@ -17,7 +17,7 @@ public class BuildingController {
 
     private final BuildingService buildingService;
 
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<BuildingResponse> createBuilding(
             @Valid @RequestBody CreateBuildingRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal

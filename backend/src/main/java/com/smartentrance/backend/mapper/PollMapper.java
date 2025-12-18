@@ -16,9 +16,7 @@ public class PollMapper {
 
         PollStatus status;
 
-        if (!poll.isActive()) {
-            status = PollStatus.STOPPED;
-        } else if (now.isBefore(poll.getStartAt())) {
+        if (now.isBefore(poll.getStartAt())) {
             status = PollStatus.PLANNED;
         } else if (now.isAfter(poll.getEndAt())) {
             status = PollStatus.COMPLETED;
@@ -37,7 +35,6 @@ public class PollMapper {
                 poll.getDescription(),
                 poll.getStartAt(),
                 poll.getEndAt(),
-                poll.isActive(),
                 status,
                 options
         );

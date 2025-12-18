@@ -3,10 +3,12 @@ package com.smartentrance.backend.service;
 import com.smartentrance.backend.dto.enums.FilterType;
 import com.smartentrance.backend.dto.notice.NoticeResponse;
 import com.smartentrance.backend.dto.notice.CreateNoticeRequest;
+import com.smartentrance.backend.dto.notice.UpdateNoticeRequest;
 import com.smartentrance.backend.mapper.NoticeMapper;
 import com.smartentrance.backend.model.Notice;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.repository.NoticeRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -51,5 +53,49 @@ public class NoticeService {
         }
 
         return notices.stream().map(noticeMapper::toResponse).toList();
+    }
+
+    @Transactional
+    @PreAuthorize("@buildingSecurity.canManageNotice(#noticeId, principal.user.id)")
+    public void deleteNotice(Integer noticeId) {
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> new EntityNotFoundException("Notice not found"));
+
+        if (notice.getEventDateTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("You cannot delete past notices (event has already happened).");
+        }
+
+        noticeRepository.delete(notice);
+    }
+
+    @Transactional
+    @PreAuthorize("@buildingSecurity.canManageNotice(#noticeId, principal.user.id)")
+    public NoticeResponse updateEvent(Integer noticeId, UpdateNoticeRequest updateData) {
+
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        if (notice.getEventDateTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot update past notices (event has already happened).");
+        }
+
+        if (updateData.title() != null) {
+            notice.setTitle(updateData.title());
+        }
+
+        if (updateData.description() != null) {
+            notice.setDescription(updateData.description());
+        }
+
+        if(updateData.location() != null) {
+            notice.setLocation(updateData.location());
+        }
+
+        if (updateData.noticeDateTime() != null) {
+            notice.setEventDateTime(updateData.noticeDateTime());
+        }
+
+        Notice savedNotice = noticeRepository.save(notice);
+        return noticeMapper.toResponse(savedNotice);
     }
 }

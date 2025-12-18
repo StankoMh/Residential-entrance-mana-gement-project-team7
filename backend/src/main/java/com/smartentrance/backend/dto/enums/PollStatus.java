@@ -4,5 +4,4 @@ public enum PollStatus {
     PLANNED,
     ACTIVE,
     COMPLETED,
-    STOPPED
 }
