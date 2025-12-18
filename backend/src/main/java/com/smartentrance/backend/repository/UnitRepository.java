@@ -15,4 +15,6 @@ public interface UnitRepository extends JpaRepository<Unit, Integer> {
     boolean existsByAccessCode(String accessCode);
 
     List<Unit> findAllByResponsibleUserId(Integer userId);
+
+    boolean existsByBuildingIdAndResponsibleUserId(Integer buildingId, Integer userId);
 }

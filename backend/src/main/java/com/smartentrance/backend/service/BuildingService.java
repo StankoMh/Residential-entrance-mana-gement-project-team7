@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -63,5 +64,9 @@ public class BuildingService {
 
     public List<Building> findAllByManagerId(Integer managerId) {
         return buildingRepository.findAllByManagerId(managerId);
+    }
+
+    public Optional<Building> findById(Integer buildingId) {
+        return buildingRepository.findById(buildingId);
     }
 }

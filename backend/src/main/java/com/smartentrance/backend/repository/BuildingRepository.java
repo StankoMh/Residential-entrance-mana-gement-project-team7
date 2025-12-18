@@ -11,6 +11,8 @@ public interface BuildingRepository extends JpaRepository<Building, Integer> {
 
     boolean existsByGooglePlaceIdAndEntrance(String googlePlaceId, String entrance);
 
+    boolean existsByIdAndManagerId(Integer id, Integer managerId);
+
     List<Building> findAllByManagerId(Integer managerId);
 
 }
