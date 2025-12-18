@@ -3,7 +3,7 @@ package com.smartentrance.backend.dto.notice;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record CreateNoticeRequest(
         @NotBlank(message = "Title is required")
@@ -16,5 +16,5 @@ public record CreateNoticeRequest(
 
         @NotNull(message = "Date and time is required")
         @FutureOrPresent(message = "Notice date and time must be in the present or future")
-        LocalDateTime noticeDateTime
+        Instant noticeDateTime
 ) {}

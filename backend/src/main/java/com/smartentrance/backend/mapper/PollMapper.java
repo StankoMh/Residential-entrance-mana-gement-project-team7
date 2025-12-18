@@ -5,14 +5,14 @@ import com.smartentrance.backend.model.VotesPoll;
 import com.smartentrance.backend.dto.enums.PollStatus;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Component
 public class PollMapper {
 
     public PollResponse toResponse(VotesPoll poll) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         PollStatus status;
 

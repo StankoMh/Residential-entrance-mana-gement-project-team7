@@ -1,6 +1,6 @@
 package com.smartentrance.backend.dto.building;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record BuildingResponse(
         Integer id,
@@ -11,5 +11,5 @@ public record BuildingResponse(
         Integer managerId,
         String managerEmail,
         Integer totalUnits,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {}

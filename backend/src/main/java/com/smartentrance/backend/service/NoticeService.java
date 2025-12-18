@@ -14,7 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -44,7 +44,7 @@ public class NoticeService {
     @Transactional(readOnly = true)
     @PreAuthorize("@buildingSecurity.hasAccess(#buildingId, principal.user.id)")
     public List<NoticeResponse> getNotices(Integer buildingId, FilterType filter) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<Notice> notices;
         switch (filter) {
             case FilterType.ACTIVE -> notices = noticeRepository.findAllByBuildingIdAndEventDateTimeAfterOrderByEventDateTimeAsc(buildingId, now);
@@ -61,7 +61,7 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Notice not found"));
 
-        if (notice.getEventDateTime().isBefore(LocalDateTime.now())) {
+        if (notice.getEventDateTime().isBefore(Instant.now())) {
             throw new IllegalStateException("You cannot delete past notices (event has already happened).");
         }
 
@@ -75,7 +75,7 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
 
-        if (notice.getEventDateTime().isBefore(LocalDateTime.now())) {
+        if (notice.getEventDateTime().isBefore(Instant.now())) {
             throw new IllegalStateException("Cannot update past notices (event has already happened).");
         }
 

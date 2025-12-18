@@ -1,9 +1,9 @@
 package com.smartentrance.backend.dto.poll;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record CastVoteResponse(
         Integer id,
         Integer unitNumber,
-        LocalDateTime votedAt
+        Instant votedAt
 ){}

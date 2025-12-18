@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -19,7 +19,7 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
         AND :now BETWEEN p.startAt AND p.endAt
         ORDER BY p.endAt ASC
     """)
-    List<VotesPoll> findAllActive(@Param("buildingId") Integer buildingId, @Param("now") LocalDateTime now);
+    List<VotesPoll> findAllActive(@Param("buildingId") Integer buildingId, @Param("now") Instant now);
 
     @Query("""
         SELECT p FROM VotesPoll p 
@@ -27,5 +27,5 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
         AND p.endAt < :now
         ORDER BY p.endAt DESC
     """)
-    List<VotesPoll> findAllHistory(@Param("buildingId") Integer buildingId, @Param("now") LocalDateTime now);
+    List<VotesPoll> findAllHistory(@Param("buildingId") Integer buildingId, @Param("now") Instant now);
 }

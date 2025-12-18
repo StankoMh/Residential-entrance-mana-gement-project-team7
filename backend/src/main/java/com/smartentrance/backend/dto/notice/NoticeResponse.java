@@ -1,6 +1,6 @@
     package com.smartentrance.backend.dto.notice;
 
-    import java.time.LocalDateTime;
+    import java.time.Instant;
 
     public record NoticeResponse(
             Integer id,
@@ -8,5 +8,5 @@
             String title,
             String description,
             String location,
-            LocalDateTime noticeDateTime
+            Instant noticeDateTime
     ) {}

@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,11 +32,11 @@ public class VotesPoll {
 
     @Column(name = "start_at", nullable = false)
     @NotNull
-    private LocalDateTime startAt;
+    private Instant startAt;
 
     @Column(name = "end_at", nullable = false)
     @NotNull
-    private LocalDateTime endAt;
+    private Instant endAt;
 
     @ManyToOne
     @JoinColumn(name = "created_by")
@@ -59,14 +59,14 @@ public class VotesPoll {
     private List<UserVote> votes = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 }

@@ -2,7 +2,7 @@ package com.smartentrance.backend.dto.poll;
 
 import com.smartentrance.backend.dto.enums.PollStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record PollResponse(
@@ -10,8 +10,8 @@ public record PollResponse(
         Integer createdByUserId,
         String title,
         String description,
-        LocalDateTime startAt,
-        LocalDateTime endAt,
+        Instant startAt,
+        Instant endAt,
         PollStatus status,
         List<PollOptionResponse> options
 ) {

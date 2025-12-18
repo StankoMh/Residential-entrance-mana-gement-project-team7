@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record CreatePollRequest(
@@ -14,11 +14,11 @@ public record CreatePollRequest(
         String description,
 
         @NotNull(message = "Start date is required")
-        LocalDateTime startAt,
+        Instant startAt,
 
         @NotNull(message = "End date is required")
         @Future(message = "End date must be in the future")
-        LocalDateTime endAt,
+        Instant endAt,
 
         @NotNull(message = "Options are required")
         @Size(min = 2, message = "At least two options are required")

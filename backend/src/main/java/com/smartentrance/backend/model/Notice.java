@@ -3,7 +3,7 @@ package com.smartentrance.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "building_events")
@@ -27,7 +27,7 @@ public class Notice {
     private String location;
 
     @Column(nullable = false)
-    private LocalDateTime eventDateTime;
+    private Instant eventDateTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "building_id", nullable = false)
@@ -40,10 +40,10 @@ public class Notice {
     private User createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
     }
 }

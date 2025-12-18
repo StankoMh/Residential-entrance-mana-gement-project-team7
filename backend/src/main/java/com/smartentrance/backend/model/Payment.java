@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "payments")
@@ -41,7 +41,7 @@ public class Payment {
     private BigDecimal amount;
 
     @Column(name = "payment_date")
-    private LocalDateTime paymentDate;
+    private Instant paymentDate;
 
     @Column(name = "bank_reference", nullable = false, unique = true)
     @NotNull @NotBlank
@@ -51,23 +51,23 @@ public class Payment {
     private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
 
         if (this.paymentDate == null) {
-            this.paymentDate = LocalDateTime.now();
+            this.paymentDate = Instant.now();
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
     }
 }

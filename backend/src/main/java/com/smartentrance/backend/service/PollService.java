@@ -13,7 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -60,7 +60,7 @@ public class PollService {
     @Transactional(readOnly = true)
     @PreAuthorize("@buildingSecurity.hasAccess(#buildingId, principal.user.id)")
     public List<PollResponse> getPolls(Integer buildingId, FilterType filter) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<VotesPoll> polls;
 
         switch (filter) {
@@ -81,7 +81,7 @@ public class PollService {
         VotesPoll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (now.isBefore(poll.getStartAt()) || now.isAfter(poll.getEndAt())) {
             throw new IllegalArgumentException("Voting is not allowed at this time.");
         }
@@ -95,7 +95,7 @@ public class PollService {
                 .map(existingVote -> {
                     existingVote.setOption(optionRef);
                     existingVote.setUser(currentUser);
-                    existingVote.setVotedAt(LocalDateTime.now());
+                    existingVote.setVotedAt(Instant.now());
                     return existingVote;
                 })
                 .orElseGet(() -> {
@@ -104,7 +104,7 @@ public class PollService {
                     newVote.setUnit(unit);
                     newVote.setUser(currentUser);
                     newVote.setOption(optionRef);
-                    newVote.setVotedAt(LocalDateTime.now());
+                    newVote.setVotedAt(Instant.now());
                     return newVote;
                 });
 
@@ -123,7 +123,7 @@ public class PollService {
             throw new IllegalStateException("Cannot delete poll with existing votes.");
         }
 
-        if (poll.getEndAt().isBefore(LocalDateTime.now())) {
+        if (poll.getEndAt().isBefore(Instant.now())) {
             throw new IllegalStateException("Cannot delete past polls.");
         }
 
@@ -136,7 +136,7 @@ public class PollService {
         VotesPoll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
 
-        if (!poll.getStartAt().isAfter(LocalDateTime.now())) {
+        if (!poll.getStartAt().isAfter(Instant.now())) {
             throw new IllegalStateException("Cannot update polls that have already started.");
         }
 
@@ -148,8 +148,8 @@ public class PollService {
             poll.setDescription(request.description());
         }
 
-        LocalDateTime newStart = request.startAt() != null ? request.startAt() : poll.getStartAt();
-        LocalDateTime newEnd = request.endAt() != null ? request.endAt() : poll.getEndAt();
+        Instant newStart = request.startAt() != null ? request.startAt() : poll.getStartAt();
+        Instant newEnd = request.endAt() != null ? request.endAt() : poll.getEndAt();
 
         if (newEnd.isBefore(newStart)) {
             throw new IllegalArgumentException("End date cannot be before start date");

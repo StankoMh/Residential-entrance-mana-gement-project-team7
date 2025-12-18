@@ -7,7 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_votes", uniqueConstraints = {
@@ -47,10 +48,10 @@ public class UserVote {
     private VotesOption option;
 
     @Column(name = "voted_at", nullable = false)
-    private LocalDateTime votedAt;
+    private Instant votedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.votedAt = LocalDateTime.now();
+        this.votedAt = Instant.now();
     }
 }

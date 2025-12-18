@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "receipts")
@@ -34,7 +34,7 @@ public class Receipt {
     private String receiptNumber;
 
     @Column(name = "generated_at")
-    private LocalDateTime generatedAt;
+    private Instant generatedAt;
 
     @Column(name = "pdf_url")
     private String pdfUrl;
@@ -42,7 +42,7 @@ public class Receipt {
     @PrePersist
     protected void onCreate() {
         if (this.generatedAt == null) {
-            this.generatedAt = LocalDateTime.now();
+            this.generatedAt = Instant.now();
         }
     }
 }
