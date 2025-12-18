@@ -62,9 +62,10 @@ public class UnitService {
         unitRepository.saveAll(units);
     }
 
-    public Optional<Unit> findByIdAndResponsibleUser(Integer unitId, User user) {
-        return unitRepository.findByIdAndResponsibleUser(unitId, user);
+    public Optional<Unit> findById(Integer id) {
+        return unitRepository.findById(id);
     }
+
     public List<Unit> findAllByResponsibleUserId(Integer userId) {
         return unitRepository.findAllByResponsibleUserId(userId);
     }

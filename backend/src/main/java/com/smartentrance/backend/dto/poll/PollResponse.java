@@ -12,7 +12,6 @@ public record PollResponse(
         String description,
         LocalDateTime startAt,
         LocalDateTime endAt,
-        boolean isActive,
         PollStatus status,
         List<PollOptionResponse> options
 ) {

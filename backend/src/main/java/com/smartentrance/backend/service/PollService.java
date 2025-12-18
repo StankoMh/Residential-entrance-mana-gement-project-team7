@@ -1,10 +1,7 @@
 package com.smartentrance.backend.service;
 
 import com.smartentrance.backend.dto.enums.FilterType;
-import com.smartentrance.backend.dto.poll.CastVoteRequest;
-import com.smartentrance.backend.dto.poll.CastVoteResponse;
-import com.smartentrance.backend.dto.poll.CreatePollRequest;
-import com.smartentrance.backend.dto.poll.PollResponse;
+import com.smartentrance.backend.dto.poll.*;
 import com.smartentrance.backend.mapper.PollMapper;
 import com.smartentrance.backend.model.*;
 import com.smartentrance.backend.repository.UserVoteRepository;
@@ -12,7 +9,6 @@ import com.smartentrance.backend.repository.VotesOptionRepository;
 import com.smartentrance.backend.repository.VotesPollRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class VoteService {
+public class PollService {
 
     private final VotesPollRepository pollRepository;
     private final UserVoteRepository userVoteRepository;
@@ -45,7 +41,6 @@ public class VoteService {
         poll.setEndAt(request.endAt());
         poll.setBuilding(buildingService.getBuildingReference(buildingId));
         poll.setCreatedBy(currentUser);
-        poll.setActive(true);
 
         for (String optionText : request.options()) {
             if (optionText != null && !optionText.isBlank()) {
@@ -80,17 +75,19 @@ public class VoteService {
     }
 
     @Transactional
-    @PreAuthorize("@buildingSecurity.hasAccess(#buildingId, principal.user.id)")
-    public CastVoteResponse castVote(Integer buildingId, Integer pollId, CastVoteRequest request, User currentUser) {
+    @PreAuthorize("@buildingSecurity.canVote(#pollId, #request.unitId(), principal.user.id)")
+    public CastVoteResponse castVote(Integer pollId, CastVoteRequest request, User currentUser) {
 
         VotesPoll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
 
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(poll.getStartAt()) || now.isAfter(poll.getEndAt())) {
+            throw new IllegalArgumentException("Voting is not allowed at this time.");
+        }
 
-        Unit unit = unitService.findByIdAndResponsibleUser(request.unitId(), currentUser)
-                .orElseThrow(() -> new AccessDeniedException("You are not the responsible user of this unit"));
-
-        validateVotingRules(poll, unit, buildingId);
+        Unit unit = unitService.findById(request.unitId())
+                .orElseThrow(() -> new EntityNotFoundException("Unit not found"));
 
         VotesOption optionRef = optionRepository.getReferenceById(request.optionId());
 
@@ -98,6 +95,7 @@ public class VoteService {
                 .map(existingVote -> {
                     existingVote.setOption(optionRef);
                     existingVote.setUser(currentUser);
+                    existingVote.setVotedAt(LocalDateTime.now());
                     return existingVote;
                 })
                 .orElseGet(() -> {
@@ -106,6 +104,7 @@ public class VoteService {
                     newVote.setUnit(unit);
                     newVote.setUser(currentUser);
                     newVote.setOption(optionRef);
+                    newVote.setVotedAt(LocalDateTime.now());
                     return newVote;
                 });
 
@@ -114,17 +113,52 @@ public class VoteService {
         return new CastVoteResponse(savedVote.getId(), unit.getUnitNumber(), savedVote.getVotedAt());
     }
 
-    private void validateVotingRules(VotesPoll poll, Unit unit, Integer buildingId) {
-        if (!poll.getBuilding().getId().equals(buildingId)) {
-            throw new IllegalArgumentException("The poll does not belong to the current building!");
-        }
-        if (!unit.getBuilding().getId().equals(buildingId)) {
-            throw new IllegalArgumentException("The unit does not belong to the current building!");
+    @Transactional
+    @PreAuthorize("@buildingSecurity.canManagePoll(#pollId, principal.user.id)")
+    public void deletePoll(Integer pollId) {
+        VotesPoll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
+
+        if (!poll.getVotes().isEmpty()) {
+            throw new IllegalStateException("Cannot delete poll with existing votes.");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        if (!poll.isActive() || now.isBefore(poll.getStartAt()) || now.isAfter(poll.getEndAt())) {
-            throw new IllegalArgumentException("The poll is not active!");
+        if (poll.getEndAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot delete past polls.");
         }
+
+        pollRepository.delete(poll);
     }
+
+    @Transactional
+    @PreAuthorize("@buildingSecurity.canManagePoll(#pollId, principal.user.id)")
+    public PollResponse updatePoll(Integer pollId, UpdatePollRequest request) {
+        VotesPoll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
+
+        if (!poll.getStartAt().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot update polls that have already started.");
+        }
+
+        if (request.title() != null) {
+            poll.setTitle(request.title());
+        }
+
+        if (request.description() != null) {
+            poll.setDescription(request.description());
+        }
+
+        LocalDateTime newStart = request.startAt() != null ? request.startAt() : poll.getStartAt();
+        LocalDateTime newEnd = request.endAt() != null ? request.endAt() : poll.getEndAt();
+
+        if (newEnd.isBefore(newStart)) {
+            throw new IllegalArgumentException("End date cannot be before start date");
+        }
+
+        if (request.startAt() != null) poll.setStartAt(request.startAt());
+        if (request.endAt() != null) poll.setEndAt(request.endAt());
+
+        return pollMapper.toResponse(pollRepository.save(poll));
+    }
+
 }

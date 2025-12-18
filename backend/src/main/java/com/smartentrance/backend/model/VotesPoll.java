@@ -53,8 +53,10 @@ public class VotesPoll {
     @ToString.Exclude
     private List<VotesOption> options = new ArrayList<>();
 
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @ToString.Exclude
+    private List<UserVote> votes = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

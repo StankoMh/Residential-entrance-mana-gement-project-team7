@@ -16,7 +16,6 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
     @Query("""
         SELECT p FROM VotesPoll p 
         WHERE p.building.id = :buildingId 
-        AND p.isActive = true 
         AND :now BETWEEN p.startAt AND p.endAt
         ORDER BY p.endAt ASC
     """)
@@ -25,7 +24,7 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
     @Query("""
         SELECT p FROM VotesPoll p 
         WHERE p.building.id = :buildingId 
-        AND (p.isActive = false OR p.endAt < :now)
+        AND p.endAt < :now
         ORDER BY p.endAt DESC
     """)
     List<VotesPoll> findAllHistory(@Param("buildingId") Integer buildingId, @Param("now") LocalDateTime now);
