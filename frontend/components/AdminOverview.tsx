@@ -1,5 +1,6 @@
 import { Users, DollarSign, TrendingUp, AlertCircle, Building2 } from 'lucide-react';
 import { useSelection } from '../contexts/SelectionContext';
+import { useNavigate } from 'react-router-dom';
 
 const stats = [
   {
@@ -41,6 +42,7 @@ const recentPayments = [
 
 export function AdminOverview() {
   const { selectedBuilding } = useSelection();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
@@ -52,8 +54,11 @@ export function AdminOverview() {
               <Building2 className="w-6 h-6 text-blue-600" />
             </div>
             <div>
+              <p className="text-sm text-blue-600 mb-1">Управление на вход</p>
               <h2 className="text-gray-900 mb-1">{selectedBuilding.name}</h2>
-              <p className="text-gray-600 text-sm">{selectedBuilding.address}</p>
+              <p className="text-gray-600 text-sm">
+                {selectedBuilding.address}{selectedBuilding.entrance ? `, вх. ${selectedBuilding.entrance}` : ''}
+              </p>
             </div>
           </div>
         </div>

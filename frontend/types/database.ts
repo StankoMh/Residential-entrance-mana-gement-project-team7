@@ -30,12 +30,20 @@ export interface ManagedBuilding {
   id: number;
   name: string;
   address: string;
+  entrance: string;
   totalUnits: number;
+  managerInfo?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
 export interface MyHome {
   unitId: number;
   unitNumber: number;
+  buildingId: number; // ID на сградата от UnitResponseFromAPI.buildingInfo.id
   buildingName: string;
   buildingAddress: string;
 }
@@ -44,9 +52,17 @@ export interface Building {
   id: number;
   name: string;
   address: string;
+  entrance: string;
+  totalUnits?: number;
   createdAt: string;
   updatedAt: string;
   units?: Unit[];
+  managerInfo?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
 export interface UnitBalance {
@@ -63,8 +79,10 @@ export interface Unit {
   unitNumber: string;
   area: number;
   residents: number;
+  residentsCount?: number; // Алиас за residents
   floor: number | null;
   accessCode?: string; // 8-цифрен код за регистрация на жители
+  isVerified?: boolean; // Потвърдени ли са данните от мениджъра
   createdAt: string;
   updatedAt: string;
   building?: Building;

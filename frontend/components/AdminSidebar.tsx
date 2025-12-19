@@ -8,7 +8,7 @@ interface AdminSidebarProps {
 }
 
 const menuItems = [
-  { id: 'homes' as AdminView, label: 'Моите жилища', icon: Home },
+  { id: 'homes' as AdminView, label: 'Начало', icon: Home },
   { id: 'overview' as AdminView, label: 'Преглед', icon: LayoutDashboard },
   { id: 'apartments' as AdminView, label: 'Апартаменти', icon: Users },
   { id: 'payments' as AdminView, label: 'Плащания', icon: Receipt },
@@ -18,7 +18,7 @@ const menuItems = [
 ];
 
 export function AdminSidebar({ currentView, onViewChange }: AdminSidebarProps) {
-  const { selectionType } = useSelection();
+  const { selectedBuilding } = useSelection();
 
   return (
     <aside className="w-64 bg-white border-r fixed left-0 top-[73px] bottom-0 overflow-y-auto">
@@ -27,8 +27,8 @@ export function AdminSidebar({ currentView, onViewChange }: AdminSidebarProps) {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
-            // Показва само "Моите жилища" ако няма избор, иначе показва всички
-            const shouldShow = !selectionType ? item.id === 'homes' : true;
+            // Показва само "Моите жилища" ако няма избран вход
+            const shouldShow = !selectedBuilding ? item.id === 'homes' : true;
             
             if (!shouldShow) return null;
             

@@ -11,6 +11,7 @@ import { AuthRedirect } from './components/AuthRedirect';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { useEffect, useState } from 'react';
 import { authService } from './services/authService';
+import { Toaster } from './components/ui/sonner';
 
 const libraries: ('places')[] = ['places'];
 
@@ -132,6 +133,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Toaster />
       </BrowserRouter>
     </SelectionProvider>
   );

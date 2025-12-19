@@ -17,7 +17,7 @@ const menuItems = [
 ];
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
-  const { selectionType } = useSelection();
+  const { selectedUnit } = useSelection();
 
   return (
     <aside className="w-64 bg-white border-r fixed left-0 top-[80px] bottom-0 overflow-y-auto">
@@ -26,8 +26,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
-            // Показва само "Моите жилища" ако няма избор, иначе показва всички
-            const shouldShow = !selectionType ? item.id === 'homes' : true;
+            // Показва само "Моите жилища" ако няма избран апартамент
+            const shouldShow = !selectedUnit ? item.id === 'homes' : true;
             
             if (!shouldShow) return null;
             

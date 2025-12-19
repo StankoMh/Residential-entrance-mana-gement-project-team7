@@ -1,4 +1,4 @@
-import { Building2, User, LogOut, ChevronDown, MapPin } from 'lucide-react';
+import { Building2, User, LogOut, ChevronDown, MapPin, Home } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -15,7 +15,7 @@ export function DashboardHeader({ onLogout, isAdmin = false }: DashboardHeaderPr
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
-  const { selectedBuilding } = useSelection();
+  const { selectedBuilding, selectedUnit } = useSelection();
 
   useEffect(() => {
     // Зареди текущия потребител от backend
@@ -75,8 +75,8 @@ export function DashboardHeader({ onLogout, isAdmin = false }: DashboardHeaderPr
             </div>
           </div>
           
-          {/* Информация за избрания вход */}
-          {selectedBuilding && (
+          {/* Информация за избрания вход/апартамент */}
+          {isAdmin && selectedBuilding && (
             <>
               <div className="h-8 w-px bg-gray-300"></div>
               <div className="flex flex-col">
@@ -84,6 +84,19 @@ export function DashboardHeader({ onLogout, isAdmin = false }: DashboardHeaderPr
                 <div className="flex items-center gap-1 text-gray-500 text-sm">
                   <MapPin className="w-3 h-3" />
                   <span>{selectedBuilding.address}</span>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {!isAdmin && selectedUnit && (
+            <>
+              <div className="h-8 w-px bg-gray-300"></div>
+              <div className="flex flex-col">
+                <span className="text-gray-900">Ап. {selectedUnit.unitNumber}</span>
+                <div className="flex items-center gap-1 text-gray-500 text-sm">
+                  <MapPin className="w-3 h-3" />
+                  <span>{selectedUnit.buildingAddress}, Вход: {selectedUnit.buildingName}</span>
                 </div>
               </div>
             </>

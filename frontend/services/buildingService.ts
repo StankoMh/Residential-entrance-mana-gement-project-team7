@@ -8,29 +8,32 @@ export interface CreateBuildingRequest {
   totalUnits: number;
 }
 
-export interface CreateBuildingResponse {
+export interface ManagerInfo {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface BuildingResponse {
   id: number;
   name: string;
   address: string;
+  entrance: string;
   totalUnits: number;
-  accessCode: string;
+  managerInfo: ManagerInfo;
 }
 
-export const buildingService = {
-  // Създай нов вход
-  create: async (data: CreateBuildingRequest): Promise<CreateBuildingResponse> => {
-    try {
-      return await api.post<CreateBuildingResponse>('/buildings/create', data);
-    } catch (error) {
-      // Mock данни за тестване без backend
-      const accessCode = Math.floor(10000000 + Math.random() * 90000000).toString();
-      return {
-        id: Math.floor(Math.random() * 1000) + 100,
-        name: data.name,
-        address: data.address,
-        totalUnits: data.totalUnits,
-        accessCode,
-      };
-    }
-  },
-};
+class BuildingService {
+  // Създаване на нова сграда (POST /api/buildings)
+  async create(data: CreateBuildingRequest): Promise<BuildingResponse> {
+    return await api.post<BuildingResponse>('/buildings', data);
+  }
+
+  // Получаване на всички сгради които управлявам (GET /api/buildings/managed)
+  async getManagedBuildings(): Promise<BuildingResponse[]> {
+    return await api.get<BuildingResponse[]>('/buildings/managed');
+  }
+}
+
+export const buildingService = new BuildingService();

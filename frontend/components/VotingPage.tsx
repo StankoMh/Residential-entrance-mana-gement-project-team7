@@ -1,62 +1,74 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Vote, Clock, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
-import { pollService } from '../services/pollService';
-import type { VotesPollWithResults } from '../types/database';
+import { pollService, type Poll } from '../services/pollService';
+import { useSelection } from '../contexts/SelectionContext';
+import { toast } from 'sonner';
 
 export function VotingPage() {
-  const [polls, setPolls] = useState<VotesPollWithResults[]>([]);
+  const { selectedUnit } = useSelection();
+  const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [votingPollId, setVotingPollId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadPolls();
-  }, []);
+    if (selectedUnit?.buildingId) {
+      loadPolls();
+    }
+  }, [selectedUnit]);
 
   const loadPolls = async () => {
+    if (!selectedUnit?.buildingId) {
+      setPolls([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
-      const data = await pollService.getActivePolls();
+      const data = await pollService.getActivePolls(selectedUnit.buildingId);
       setPolls(data);
     } catch (err) {
       console.error('Error loading polls:', err);
       setError('Грешка при зареждане на гласуванията');
+      setPolls([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVote = async (pollId: number, optionId: number) => {
+    if (!selectedUnit) {
+      toast.error('Няма избран апартамент');
+      return;
+    }
+
     try {
       setVotingPollId(pollId);
-      await pollService.vote({ pollId, optionId });
+      await pollService.vote(pollId, {
+        optionId,
+        unitId: selectedUnit.unitId,
+      });
       
       // Презареждаме гласуванията за да видим актуалните резултати
       await loadPolls();
       
-      alert('Вашият глас беше записан успешно!');
+      toast.success('Вашият глас беше записан успешно!');
     } catch (err: any) {
       console.error('Error voting:', err);
-      alert(err.message || 'Грешка при гласуване');
+      toast.error(err.message || 'Грешка при гласуване');
     } finally {
       setVotingPollId(null);
     }
   };
 
-  const isPollActive = (poll: VotesPollWithResults) => {
-    const now = new Date();
-    const startDate = new Date(poll.startAt);
-    const endDate = new Date(poll.endAt);
-    return poll.isActive && now >= startDate && now <= endDate;
-  };
-
-  const getPollStatus = (poll: VotesPollWithResults) => {
+  const getPollStatus = (poll: Poll) => {
     const now = new Date();
     const startDate = new Date(poll.startAt);
     const endDate = new Date(poll.endAt);
 
-    if (!poll.isActive) return 'closed';
+    if (poll.status === 'ENDED') return 'ended';
     if (now < startDate) return 'upcoming';
     if (now > endDate) return 'ended';
     return 'active';
@@ -83,13 +95,6 @@ export function VotingPage() {
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm">
             <AlertCircle className="w-4 h-4" />
             Приключило
-          </span>
-        );
-      case 'closed':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4" />
-            Затворено
           </span>
         );
       default:
@@ -134,9 +139,7 @@ export function VotingPage() {
         <div className="space-y-6">
           {polls.map((poll) => {
             const status = getPollStatus(poll);
-            const hasVoted = !!poll.userVote;
-            const canVote = status === 'active' && !hasVoted;
-            const totalVotes = poll.totalVotes || 0;
+            const canVote = status === 'active';
 
             return (
               <div key={poll.id} className="bg-white rounded-lg shadow overflow-hidden">
@@ -169,44 +172,15 @@ export function VotingPage() {
                         })}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>{totalVotes} глас(а)</span>
-                    </div>
                   </div>
                 </div>
 
                 {/* Options */}
                 <div className="p-6">
-                  {hasVoted && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-green-800 text-sm flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Вие вече гласувахте в това гласуване
-                      </p>
-                    </div>
-                  )}
-
                   <div className="space-y-3">
                     {poll.options?.map((option) => {
-                      const voteCount = option.voteCount || 0;
-                      const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
-                      const isUserChoice = poll.userVote?.optionId === option.id;
-
                       return (
                         <div key={option.id} className="relative">
-                          {/* Progress bar background */}
-                          {(hasVoted || status !== 'active') && (
-                            <div className="absolute inset-0 bg-blue-50 rounded-lg overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-500 ${
-                                  isUserChoice ? 'bg-blue-200' : 'bg-blue-100'
-                                }`}
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          )}
-
                           {/* Option content */}
                           <div className="relative">
                             {canVote ? (
@@ -216,29 +190,16 @@ export function VotingPage() {
                                 className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <div className="flex items-center justify-between">
-                                  <span className="text-gray-900">{option.optionText}</span>
+                                  <span className="text-gray-900">{option.text}</span>
                                   {votingPollId === poll.id && (
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                                   )}
                                 </div>
                               </button>
                             ) : (
-                              <div className="p-4 rounded-lg border-2 border-transparent">
+                              <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-gray-900">{option.optionText}</span>
-                                    {isUserChoice && (
-                                      <CheckCircle className="w-5 h-5 text-green-600" />
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-gray-600">
-                                      {voteCount} глас(а)
-                                    </span>
-                                    <span className="text-gray-900 min-w-[3rem] text-right">
-                                      {percentage.toFixed(1)}%
-                                    </span>
-                                  </div>
+                                  <span className="text-gray-900">{option.text}</span>
                                 </div>
                               </div>
                             )}

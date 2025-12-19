@@ -1,32 +1,43 @@
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { eventService, type Event } from '../services/eventService';
+import { eventService, type Notice } from '../services/eventService';
+import { useSelection } from '../contexts/SelectionContext';
 
 interface EventsPanelProps {
   expanded?: boolean;
 }
 
 export function EventsPanel({ expanded = false }: EventsPanelProps) {
-  const [events, setEvents] = useState<Event[]>([]);
+  const { selectedUnit } = useSelection();
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadEvents();
-  }, []);
+    if (selectedUnit?.buildingId) {
+      loadNotices();
+    }
+  }, [selectedUnit]);
 
-  const loadEvents = async () => {
+  const loadNotices = async () => {
+    if (!selectedUnit?.buildingId) {
+      setNotices([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const data = await eventService.getUpcoming();
-      setEvents(data);
+      const data = await eventService.getActive(selectedUnit.buildingId);
+      setNotices(data);
     } catch (err) {
-      console.error('Error loading events:', err);
+      console.error('Error loading notices:', err);
+      setNotices([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const displayEvents = expanded ? events : events.slice(0, 3);
+  const displayNotices = expanded ? notices : notices.slice(0, 3);
 
   if (loading) {
     return (
@@ -51,21 +62,21 @@ export function EventsPanel({ expanded = false }: EventsPanelProps) {
       </div>
 
       <div className="divide-y">
-        {displayEvents.length === 0 ? (
+        {displayNotices.length === 0 ? (
           <div className="p-6 text-center text-gray-600">
             Няма предстоящи събития
           </div>
         ) : (
-          displayEvents.map((event) => {
-            const eventDate = new Date(event.eventDate);
+          displayNotices.map((notice) => {
+            const noticeDate = new Date(notice.noticeDateTime);
             return (
-              <div key={event.id} className="p-4 hover:bg-gray-50 transition-colors">
-                <h3 className="text-gray-900 mb-2">{event.title}</h3>
-                <p className="text-gray-600 text-sm mb-3">{event.description}</p>
+              <div key={notice.id} className="p-4 hover:bg-gray-50 transition-colors">
+                <h3 className="text-gray-900 mb-2">{notice.title}</h3>
+                <p className="text-gray-600 text-sm mb-3">{notice.description}</p>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="w-4 h-4" />
-                    <span>{eventDate.toLocaleDateString('bg-BG', { 
+                    <span>{noticeDate.toLocaleDateString('bg-BG', { 
                       weekday: 'long', 
                       year: 'numeric', 
                       month: 'long', 
@@ -74,12 +85,12 @@ export function EventsPanel({ expanded = false }: EventsPanelProps) {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="w-4 h-4" />
-                    <span>{eventDate.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{noticeDate.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  {event.location && (
+                  {notice.location && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
-                      <span>{event.location}</span>
+                      <span>{notice.location}</span>
                     </div>
                   )}
                 </div>
@@ -89,7 +100,7 @@ export function EventsPanel({ expanded = false }: EventsPanelProps) {
         )}
       </div>
 
-      {!expanded && events.length > 3 && (
+      {!expanded && notices.length > 3 && (
         <div className="p-4 border-t">
           <button className="w-full text-center text-blue-600 hover:text-blue-700">
             Виж всички събития

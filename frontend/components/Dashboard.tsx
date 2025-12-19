@@ -21,13 +21,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const currentView = (view as DashboardView) || 'overview';
   const { selectionType } = useSelection();
 
-  // Ако има избран вход, пренасочи към admin dashboard
-  useEffect(() => {
-    if (selectionType === 'building') {
-      navigate('/admin/dashboard/overview', { replace: true });
-    }
-  }, [selectionType, navigate]);
-
   // Validate view parameter
   useEffect(() => {
     if (view && !dashboardViews.includes(view as DashboardView)) {

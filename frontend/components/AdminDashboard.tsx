@@ -22,13 +22,6 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const currentView = (view as AdminView) || 'overview';
   const { selectionType } = useSelection();
 
-  // Ако няма избран вход, пренасочи към избор на жилища/входове
-  useEffect(() => {
-    if (selectionType !== 'building') {
-      navigate('/dashboard/homes', { replace: true });
-    }
-  }, [selectionType, navigate]);
-
   // Validate view parameter
   useEffect(() => {
     if (view && !adminViews.includes(view as AdminView)) {
