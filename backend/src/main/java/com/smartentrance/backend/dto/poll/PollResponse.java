@@ -15,6 +15,7 @@ public record PollResponse(
         PollStatus status,
         Long totalVotes,
         Integer totalEligibleVoters,
+        Integer userVotedOptionId,
         List<PollOptionResponse> options
 ) {
     public record PollOptionResponse(Integer id, String text, Long voteCount) {}

@@ -31,8 +31,7 @@ public class UserMapper {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .role(UserRole.USER) // Слагаме дефолтна роля тук
-                // ВНИМАНИЕ: Не сетваме паролата тук, защото тя трябва да се хешира
+                .role(UserRole.USER)
                 .build();
     }
 }

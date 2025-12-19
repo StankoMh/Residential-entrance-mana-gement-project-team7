@@ -12,11 +12,9 @@ import java.util.List;
 @Repository
 public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
 
-    // 1. Пренаписваме и този метод с @Query, за да ползваме FETCH
     @Query("SELECT DISTINCT p FROM VotesPoll p LEFT JOIN FETCH p.options WHERE p.building.id = :buildingId ORDER BY p.createdAt DESC")
     List<VotesPoll> findAllByBuildingIdOrderByCreatedAtDesc(@Param("buildingId") Integer buildingId);
 
-    // 2. Добавяме LEFT JOIN FETCH p.options
     @Query("""
         SELECT DISTINCT p FROM VotesPoll p 
         LEFT JOIN FETCH p.options
@@ -26,7 +24,6 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
     """)
     List<VotesPoll> findAllActive(@Param("buildingId") Integer buildingId, @Param("now") Instant now);
 
-    // 3. Добавяме LEFT JOIN FETCH p.options
     @Query("""
         SELECT DISTINCT p FROM VotesPoll p 
         LEFT JOIN FETCH p.options

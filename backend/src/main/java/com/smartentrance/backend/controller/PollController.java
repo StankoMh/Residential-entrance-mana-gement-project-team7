@@ -23,9 +23,18 @@ public class PollController {
     @GetMapping("/buildings/{buildingId}/polls")
     public ResponseEntity<List<PollResponse>> getPolls(
             @PathVariable Integer buildingId,
-            @RequestParam Optional<FilterType> type
+            @RequestParam Optional<FilterType> type,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        return ResponseEntity.ok(pollService.getPolls(buildingId, type.orElse(FilterType.ALL)));
+        return ResponseEntity.ok(pollService.getPolls(buildingId, type.orElse(FilterType.ALL), userPrincipal.user()));
+    }
+
+    @GetMapping("/polls/{pollId}")
+    public ResponseEntity<PollResponse> getPoll(
+            @PathVariable Integer pollId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        return ResponseEntity.ok(pollService.getPollById(pollId, userPrincipal.user()));
     }
 
     @PostMapping("/buildings/{buildingId}/polls")

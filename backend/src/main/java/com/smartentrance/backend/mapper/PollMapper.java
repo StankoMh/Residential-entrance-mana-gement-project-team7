@@ -11,18 +11,9 @@ import java.util.List;
 @Component
 public class PollMapper {
 
-    public PollResponse toResponse(VotesPoll poll) {
+    public PollResponse toResponse(VotesPoll poll, Integer userVotedOptionId) {
         Instant now = Instant.now();
-
-        PollStatus status;
-
-        if (now.isBefore(poll.getStartAt())) {
-            status = PollStatus.PLANNED;
-        } else if (now.isAfter(poll.getEndAt())) {
-            status = PollStatus.COMPLETED;
-        } else {
-            status = PollStatus.ACTIVE;
-        }
+        PollStatus status = calculateStatus(poll, now);
 
         List<PollResponse.PollOptionResponse> options = poll.getOptions().stream()
                 .map(opt -> new PollResponse.PollOptionResponse(
@@ -48,7 +39,14 @@ public class PollMapper {
                 status,
                 totalVotes,
                 totalEligible,
+                userVotedOptionId,
                 options
         );
+    }
+
+    private PollStatus calculateStatus(VotesPoll poll, Instant now) {
+        if (now.isBefore(poll.getStartAt())) return PollStatus.PLANNED;
+        if (now.isAfter(poll.getEndAt())) return PollStatus.COMPLETED;
+        return PollStatus.ACTIVE;
     }
 }

@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,12 +54,13 @@ public class PollService {
         }
 
         VotesPoll votesPoll = pollRepository.save(poll);
-        return pollMapper.toResponse(votesPoll);
+
+        return pollMapper.toResponse(votesPoll, null);
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("@buildingSecurity.hasAccess(#buildingId, principal.user)")
-    public List<PollResponse> getPolls(Integer buildingId, FilterType filter) {
+    public List<PollResponse> getPolls(Integer buildingId, FilterType filter, User currentUser) {
         Instant now = Instant.now();
         List<VotesPoll> polls;
 
@@ -67,9 +70,32 @@ public class PollService {
             default -> polls = pollRepository.findAllByBuildingIdOrderByCreatedAtDesc(buildingId);
         }
 
+        Map<Integer, Integer> userVotesMap = userVoteRepository.findAllByUserIdAndBuildingId(currentUser.getId(), buildingId)
+                .stream()
+                .collect(Collectors.toMap(
+                        v -> v.getPoll().getId(),
+                        v -> v.getOption().getId()
+                ));
+
         return polls.stream()
-                .map(pollMapper::toResponse)
+                .map(poll -> pollMapper.toResponse(
+                        poll,
+                        userVotesMap.get(poll.getId())
+                ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@buildingSecurity.hasAccessByPollId(#pollId, principal.user)") // TODO: FIX
+    public PollResponse getPollById(Integer pollId, User currentUser) {
+        VotesPoll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
+
+        Integer userVotedOptionId = userVoteRepository.findByPollIdAndUserId(pollId, currentUser.getId())
+                .map(v -> v.getOption().getId())
+                .orElse(null);
+
+        return pollMapper.toResponse(poll, userVotedOptionId);
     }
 
     @Transactional
@@ -147,6 +173,8 @@ public class PollService {
         if (request.startAt() != null) poll.setStartAt(request.startAt());
         if (request.endAt() != null) poll.setEndAt(request.endAt());
 
-        return pollMapper.toResponse(pollRepository.save(poll));
+        VotesPoll savedPoll = pollRepository.save(poll);
+
+        return pollMapper.toResponse(savedPoll, null);
     }
 }
