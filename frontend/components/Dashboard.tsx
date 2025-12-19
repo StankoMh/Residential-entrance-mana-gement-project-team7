@@ -2,7 +2,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { Sidebar } from './Sidebar';
 import { Overview } from './Overview';
 import { PaymentsPage } from './PaymentsPage';
-import { EventsPanel } from './EventsPanel';
+import { EventsPage } from './EventsPage';
 import { VotingPage } from './VotingPage';
 import { ProfilePage } from './ProfilePage';
 import { HomesAndBuildings } from './HomesAndBuildings';
@@ -46,12 +46,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           
           {currentView === 'payments' && <PaymentsPage />}
           
-          {currentView === 'events' && (
-            <div>
-              <h1 className="text-gray-900 mb-6">Събития</h1>
-              <EventsPanel expanded />
-            </div>
-          )}
+          {currentView === 'events' && <EventsPage />}
           
           {currentView === 'voting' && <VotingPage />}
 

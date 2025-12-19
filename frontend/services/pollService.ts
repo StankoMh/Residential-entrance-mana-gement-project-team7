@@ -22,6 +22,7 @@ export interface PollWithResults extends Poll {
   totalVotes?: number;
   userVote?: {
     id: number;
+    optionId: number;
     unitNumber: number;
     votedAt: string;
   };
@@ -29,15 +30,15 @@ export interface PollWithResults extends Poll {
 
 export interface CreatePollRequest {
   title: string;
-  description: string;
+  description: string | null;
   startAt: string; // ISO datetime string
   endAt: string; // ISO datetime string
-  options: string[]; // Array of option texts
+  options: string[];
 }
 
 export interface UpdatePollRequest {
   title: string;
-  description: string;
+  description: string | null;
   startAt: string; // ISO datetime string
   endAt: string; // ISO datetime string
 }
@@ -65,6 +66,17 @@ class PollService {
   // Взимане на активни гласувания за сграда
   async getActivePolls(buildingId: number): Promise<Poll[]> {
     return await api.get<Poll[]>(`/buildings/${buildingId}/polls`, { type: 'ACTIVE' });
+  }
+
+  // Взимане на активни гласувания с резултати (за жители)
+  async getActivePollsWithResults(buildingId: number): Promise<PollWithResults[]> {
+    return await api.get<PollWithResults[]>(`/buildings/${buildingId}/polls`, { type: 'ACTIVE' });
+  }
+
+  // Взимане на всички гласувания с резултати (за жители)
+  async getPollsWithResults(buildingId: number, type?: PollType): Promise<PollWithResults[]> {
+    const params = type ? { type: type } : undefined;
+    return await api.get<PollWithResults[]>(`/buildings/${buildingId}/polls`, params);
   }
 
   // Създаване на ново гласуване (само за админи)

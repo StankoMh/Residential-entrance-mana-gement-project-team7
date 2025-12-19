@@ -21,8 +21,8 @@ export function AdminSidebar({ currentView, onViewChange }: AdminSidebarProps) {
   const { selectedBuilding } = useSelection();
 
   return (
-    <aside className="w-64 bg-white border-r fixed left-0 top-[73px] bottom-0 overflow-y-auto">
-      <nav className="p-6">
+    <aside className="w-64 bg-white border-r fixed left-0 top-[85px] bottom-0 overflow-y-auto">
+      <nav className="p-4">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;

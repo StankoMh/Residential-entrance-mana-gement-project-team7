@@ -224,7 +224,7 @@ export function ApartmentsManagement() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">Свободен</span>
+                          <span className="text-gray-400 italic">Няма информация</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -260,13 +260,19 @@ export function ApartmentsManagement() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        {isOccupied ? (
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                            Активен
+                        {unit.isVerified === true ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                            <Check className="w-4 h-4" />
+                            Потвърден
+                          </span>
+                        ) : unit.isVerified === false && unit.ownerInfo ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+                            <AlertTriangle className="w-4 h-4" />
+                            Непотвърден
                           </span>
                         ) : (
                           <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                            Свободен
+                            Няма информация
                           </span>
                         )}
                       </td>
@@ -318,13 +324,13 @@ export function ApartmentsManagement() {
 
       {/* Модал за редактиране */}
       {editingUnit && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-gray-900">Редактиране на апартамент</h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Апартамент № {editingUnit.unitNumber}
+                  Апатамент № {editingUnit.unitNumber}
                 </p>
               </div>
               <button
@@ -343,8 +349,9 @@ export function ApartmentsManagement() {
                 <input
                   type="number"
                   min="0"
-                  value={formData.area}
-                  onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })}
+                  step="0.01"
+                  value={formData.area || ''}
+                  onChange={(e) => setFormData({ ...formData, area: e.target.value === '' ? 0 : Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="75"
                 />
@@ -357,8 +364,8 @@ export function ApartmentsManagement() {
                 <input
                   type="number"
                   min="0"
-                  value={formData.residentsCount}
-                  onChange={(e) => setFormData({ ...formData, residentsCount: Number(e.target.value) })}
+                  value={formData.residentsCount || ''}
+                  onChange={(e) => setFormData({ ...formData, residentsCount: e.target.value === '' ? 0 : Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="3"
                 />

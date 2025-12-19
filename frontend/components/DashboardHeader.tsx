@@ -96,7 +96,7 @@ export function DashboardHeader({ onLogout, isAdmin = false }: DashboardHeaderPr
                 <span className="text-gray-900">Ап. {selectedUnit.unitNumber}</span>
                 <div className="flex items-center gap-1 text-gray-500 text-sm">
                   <MapPin className="w-3 h-3" />
-                  <span>{selectedUnit.buildingAddress}, Вход: {selectedUnit.buildingName}</span>
+                  <span>{selectedUnit.buildingAddress}, {selectedUnit.buildingName}</span>
                 </div>
               </div>
             </>
@@ -127,7 +127,7 @@ export function DashboardHeader({ onLogout, isAdmin = false }: DashboardHeaderPr
             
             {/* Dropdown меню */}
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-2">
+              <div className="absolute right-0 mt-6 w-56 bg-white rounded-lg shadow-lg border py-2">
                 <button 
                   onClick={handleProfileClick}
                   className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"

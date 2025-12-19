@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Vote, Plus, Trash2, X, Calendar, CheckCircle, AlertCircle, Clock, Edit2 } from 'lucide-react';
-import { pollService, type CreatePollRequest, type UpdatePollRequest, type Poll } from '../services/pollService';
+import { Vote, Plus, Trash2, X, Calendar, CheckCircle, AlertCircle, Clock, Edit2, Filter } from 'lucide-react';
+import { pollService, type CreatePollRequest, type UpdatePollRequest, type Poll, type PollType } from '../services/pollService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
 
@@ -11,12 +11,14 @@ export function VotingManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingPoll, setEditingPoll] = useState<Poll | null>(null);
   const [error, setError] = useState('');
+  const [filterType, setFilterType] = useState<PollType>('ALL');
+  const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
 
   useEffect(() => {
     if (selectedBuilding) {
       loadPolls();
     }
-  }, [selectedBuilding]);
+  }, [selectedBuilding, filterType]);
 
   const loadPolls = async () => {
     if (!selectedBuilding) return;
@@ -24,13 +26,33 @@ export function VotingManagement() {
     try {
       setLoading(true);
       setError('');
-      const data = await pollService.getAllPolls(selectedBuilding.id);
+      const data = await pollService.getAllPolls(selectedBuilding.id, filterType);
       setPolls(data);
     } catch (err) {
       console.error('Error loading polls:', err);
       setError('Грешка при зареждане на гласуванията');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Зареждаме всички гласувания за статистика
+  const [allPolls, setAllPolls] = useState<Poll[]>([]);
+  
+  useEffect(() => {
+    if (selectedBuilding) {
+      loadAllPolls();
+    }
+  }, [selectedBuilding]);
+
+  const loadAllPolls = async () => {
+    if (!selectedBuilding) return;
+    
+    try {
+      const data = await pollService.getAllPolls(selectedBuilding.id, 'ALL');
+      setAllPolls(data);
+    } catch (err) {
+      console.error('Error loading all polls:', err);
     }
   };
 
@@ -43,6 +65,7 @@ export function VotingManagement() {
       await pollService.deletePoll(pollId);
       toast.success('Гласуването беше изтрито успешно');
       await loadPolls();
+      await loadAllPolls(); // Обновяваме и статистиката
     } catch (err) {
       console.error('Error deleting poll:', err);
       toast.error('Грешка при изтриване на гласуването');
@@ -139,7 +162,7 @@ export function VotingManagement() {
             </div>
             <span className="text-gray-600">Всички</span>
           </div>
-          <div className="text-gray-900">{polls.length}</div>
+          <div className="text-gray-900">{allPolls.length}</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -150,7 +173,7 @@ export function VotingManagement() {
             <span className="text-gray-600">Активни</span>
           </div>
           <div className="text-gray-900">
-            {polls.filter((p) => getPollStatus(p) === 'active').length}
+            {allPolls.filter((p) => getPollStatus(p) === 'active').length}
           </div>
         </div>
 
@@ -162,7 +185,45 @@ export function VotingManagement() {
             <span className="text-gray-600">Приключили</span>
           </div>
           <div className="text-gray-900">
-            {polls.filter((p) => getPollStatus(p) === 'ended').length}
+            {allPolls.filter((p) => getPollStatus(p) === 'ended').length}
+          </div>
+        </div>
+      </div>
+
+{/* Филтри */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setFilterType('ALL')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'ALL'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Всички
+            </button>
+            <button
+              onClick={() => setFilterType('ACTIVE')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'ACTIVE'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Активни
+            </button>
+            <button
+              onClick={() => setFilterType('HISTORY')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'HISTORY'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Приключили
+            </button>
           </div>
         </div>
       </div>
@@ -171,87 +232,119 @@ export function VotingManagement() {
       {polls.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Vote className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-gray-900 mb-2">Няма създадени гласувания</h3>
-          <p className="text-gray-600 mb-6">Създайте първото си гласуване за жителите</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Създай гласуване
-          </button>
+          <h3 className="text-gray-900 mb-2">
+            {filterType === 'ALL' && 'Няма създадени гласувания'}
+            {filterType === 'ACTIVE' && 'Няма активни гласувания'}
+            {filterType === 'HISTORY' && 'Няма приключили гласувания'}
+          </h3>
+          <p className="text-gray-600">
+            {filterType === 'ALL' && 'Създайте първото си гласуване за жителите'}
+            {filterType === 'ACTIVE' && 'Всички активни гласувания ще се показват тук'}
+            {filterType === 'HISTORY' && 'Всички приключили гласувания ще се показват тук'}
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {polls.map((poll) => {
             const status = getPollStatus(poll);
 
             return (
-              <div key={poll.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div 
+                key={poll.id} 
+                onClick={() => setSelectedPoll(poll)}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-all overflow-hidden cursor-pointer"
+              >
                 <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-gray-900">{poll.title}</h3>
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-gray-900 flex-1 pr-2">{poll.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-shrink-0">
                         {getStatusBadge(status)}
                       </div>
-                      {poll.description && (
-                        <p className="text-gray-600 mb-3">{poll.description}</p>
-                      )}
-                      <div className="flex items-center gap-6 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>
-                            {new Date(poll.startAt).toLocaleDateString('bg-BG', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                            {' - '}
-                            {new Date(poll.endAt).toLocaleDateString('bg-BG', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (status === 'upcoming') {
+                              setEditingPoll(poll);
+                            } else {
+                              toast.error('Не може да се редактира активно или приключило гласуване');
+                            }
+                          }}
+                          disabled={status !== 'upcoming'}
+                          className={`p-2 rounded-lg transition-colors ${
+                            status === 'upcoming'
+                              ? 'hover:bg-blue-50 text-blue-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={
+                            status === 'upcoming'
+                              ? 'Редактирай'
+                              : 'Не може да се редактира активно или приключило гласуване'
+                          }
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (status === 'upcoming') {
+                              handleDeletePoll(poll.id);
+                            } else {
+                              toast.error('Не може да се изтрие активно или приключило гласуване');
+                            }
+                          }}
+                          disabled={status !== 'upcoming'}
+                          className={`p-2 rounded-lg transition-colors ${
+                            status === 'upcoming'
+                              ? 'hover:bg-red-50 text-red-600'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={
+                            status === 'upcoming'
+                              ? 'Изтрий'
+                              : 'Не може да се изтрие активно или приключило гласуване'
+                          }
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditingPoll(poll)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Редактирай гласуване"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePoll(poll.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Изтрий гласуване"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
                     </div>
                   </div>
 
-                  {/* Опции */}
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-700 mb-2">Опции:</div>
-                    {poll.options?.map((option, index) => (
-                      <div key={option.id} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">#{index + 1}</span>
-                          <span className="text-gray-900">{option.text}</span>
-                        </div>
-                      </div>
-                    ))}
+                  {poll.description && (
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{poll.description}</p>
+                  )}
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <span className="line-clamp-1">
+                      {new Date(poll.startAt).toLocaleDateString('bg-BG', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                      {' - '}
+                      {new Date(poll.endAt).toLocaleDateString('bg-BG', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Modal за преглед на гласуване */}
+      {selectedPoll && (
+        <PollManagementModal
+          poll={selectedPoll}
+          onClose={() => setSelectedPoll(null)}
+          getPollStatus={getPollStatus}
+          getStatusBadge={getStatusBadge}
+        />
       )}
 
       {/* Modal за създаване на гласуване */}
@@ -262,6 +355,7 @@ export function VotingManagement() {
           onSuccess={() => {
             setShowCreateModal(false);
             loadPolls();
+            loadAllPolls(); // Обновяваме и статистиката
           }}
         />
       )}
@@ -274,9 +368,121 @@ export function VotingManagement() {
           onSuccess={() => {
             setEditingPoll(null);
             loadPolls();
+            loadAllPolls(); // Обновяваме и статистиката
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Modal компонент за преглед на гласуване
+interface PollManagementModalProps {
+  poll: Poll;
+  onClose: () => void;
+  getPollStatus: (poll: Poll) => string;
+  getStatusBadge: (status: string) => React.ReactNode;
+}
+
+function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: PollManagementModalProps) {
+  const status = getPollStatus(poll);
+
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b sticky top-0 bg-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-gray-900">Информация за гласуване</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Заглавие */}
+          <div>
+            <label className="block text-gray-700 mb-2">Заглавие *</label>
+            <input
+              type="text"
+              value={poll.title}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Напр. Одобрение на бюджет за 2025"
+            />
+          </div>
+
+          {/* Описание */}
+          <div>
+            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
+            <textarea
+              value={poll.description || ''}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder="Допълнителна информация за гласуването..."
+            />
+          </div>
+
+          {/* Дати */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-2">Начална дата *</label>
+              <input
+                type="datetime-local"
+                value={new Date(poll.startAt).toISOString().slice(0, 16)}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-2">Крайна дата *</label>
+              <input
+                type="datetime-local"
+                value={new Date(poll.endAt).toISOString().slice(0, 16)}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Опции */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-gray-700">Опции за гласуване *</label>
+            </div>
+
+            <div className="space-y-3">
+              {poll.options?.map((option, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={option.text}
+                    readOnly
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`Опция ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Бутон за затваряне */}
+          <div className="flex justify-end pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Затвори
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -387,7 +593,7 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
@@ -604,7 +810,7 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">

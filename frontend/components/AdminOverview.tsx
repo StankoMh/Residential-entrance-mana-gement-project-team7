@@ -46,24 +46,6 @@ export function AdminOverview() {
 
   return (
     <div className="space-y-6">
-      {/* Красив индикатор за избрания вход */}
-      {selectedBuilding && (
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white rounded-lg shadow-sm">
-              <Building2 className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-600 mb-1">Управление на вход</p>
-              <h2 className="text-gray-900 mb-1">{selectedBuilding.name}</h2>
-              <p className="text-gray-600 text-sm">
-                {selectedBuilding.address}{selectedBuilding.entrance ? `, вх. ${selectedBuilding.entrance}` : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div>
         <h1 className="text-gray-900 mb-2">Преглед</h1>
         <p className="text-gray-600">Обобщена информация за входа</p>

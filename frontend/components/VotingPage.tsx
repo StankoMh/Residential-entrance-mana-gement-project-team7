@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, Vote, Clock, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
-import { pollService, type Poll } from '../services/pollService';
+import { CheckCircle, Vote, Clock, TrendingUp, AlertCircle, Calendar, Filter, X } from 'lucide-react';
+import { pollService, type PollWithResults, type PollType } from '../services/pollService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
 
 export function VotingPage() {
   const { selectedUnit } = useSelection();
-  const [polls, setPolls] = useState<Poll[]>([]);
+  const [polls, setPolls] = useState<PollWithResults[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [votingPollId, setVotingPollId] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState<PollType>('ACTIVE');
+  const [selectedPoll, setSelectedPoll] = useState<PollWithResults | null>(null);
 
   useEffect(() => {
     if (selectedUnit?.buildingId) {
       loadPolls();
     }
-  }, [selectedUnit]);
+  }, [selectedUnit, filterType]);
 
   const loadPolls = async () => {
     if (!selectedUnit?.buildingId) {
@@ -27,7 +29,7 @@ export function VotingPage() {
     try {
       setLoading(true);
       setError('');
-      const data = await pollService.getActivePolls(selectedUnit.buildingId);
+      const data = await pollService.getPollsWithResults(selectedUnit.buildingId, filterType);
       setPolls(data);
     } catch (err) {
       console.error('Error loading polls:', err);
@@ -63,7 +65,7 @@ export function VotingPage() {
     }
   };
 
-  const getPollStatus = (poll: Poll) => {
+  const getPollStatus = (poll: PollWithResults) => {
     const now = new Date();
     const startDate = new Date(poll.startAt);
     const endDate = new Date(poll.endAt);
@@ -127,115 +129,102 @@ export function VotingPage() {
         <p className="text-gray-600">Участвайте в гласуванията на входа</p>
       </div>
 
+      {/* Филтри */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setFilterType('ALL')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'ALL'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Всички
+            </button>
+            <button
+              onClick={() => setFilterType('ACTIVE')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'ACTIVE'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Активни
+            </button>
+            <button
+              onClick={() => setFilterType('HISTORY')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterType === 'HISTORY'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Архив
+            </button>
+          </div>
+        </div>
+      </div>
+
       {polls.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Vote className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-gray-900 mb-2">Няма активни гласувания</h3>
+          <h3 className="text-gray-900 mb-2">
+            {filterType === 'ACTIVE' && 'Няма активни гласувания'}
+            {filterType === 'HISTORY' && 'Няма приключили гласувания'}
+            {filterType === 'ALL' && 'Няма гласувания'}
+          </h3>
           <p className="text-gray-600">
-            В момента няма активни гласувания. Проверете отново по-късно.
+            {filterType === 'ACTIVE' && 'В момента няма активни гласувания. Проверете отново по-късно.'}
+            {filterType === 'HISTORY' && 'Все още няма приключили гласувания.'}
+            {filterType === 'ALL' && 'Все още няма създадени гласувания.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {polls.map((poll) => {
             const status = getPollStatus(poll);
-            const canVote = status === 'active';
+            const hasVoted = !!poll.userVote;
 
             return (
-              <div key={poll.id} className="bg-white rounded-lg shadow overflow-hidden">
-                {/* Header */}
-                <div className="p-6 border-b bg-gray-50">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h2 className="text-gray-900 mb-2">{poll.title}</h2>
-                      {poll.description && (
-                        <p className="text-gray-600">{poll.description}</p>
-                      )}
-                    </div>
-                    {getStatusBadge(status)}
-                  </div>
-
-                  <div className="flex items-center gap-6 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {new Date(poll.startAt).toLocaleDateString('bg-BG', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                        {' - '}
-                        {new Date(poll.endAt).toLocaleDateString('bg-BG', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Options */}
+              <div
+                key={poll.id}
+                onClick={() => setSelectedPoll(poll)}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+              >
                 <div className="p-6">
-                  <div className="space-y-3">
-                    {poll.options?.map((option) => {
-                      return (
-                        <div key={option.id} className="relative">
-                          {/* Option content */}
-                          <div className="relative">
-                            {canVote ? (
-                              <button
-                                onClick={() => handleVote(poll.id, option.id)}
-                                disabled={votingPollId === poll.id}
-                                className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-gray-900">{option.text}</span>
-                                  {votingPollId === poll.id && (
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                                  )}
-                                </div>
-                              </button>
-                            ) : (
-                              <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-gray-900">{option.text}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-gray-900 flex-1 pr-2">{poll.title}</h3>
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(status)}
+                    </div>
                   </div>
 
-                  {status === 'upcoming' && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800 text-sm">
-                        Гласуването ще започне на{' '}
-                        {new Date(poll.startAt).toLocaleDateString('bg-BG', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
+                  {poll.description && (
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{poll.description}</p>
                   )}
 
-                  {status === 'ended' && (
-                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="text-gray-700 text-sm">
-                        Гласуването приключи на{' '}
-                        {new Date(poll.endAt).toLocaleDateString('bg-BG', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <span className="line-clamp-1">
+                      {new Date(poll.startAt).toLocaleDateString('bg-BG', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                      {' - '}
+                      {new Date(poll.endAt).toLocaleDateString('bg-BG', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                  </div>
+
+                  {hasVoted && (
+                    <div className="flex items-center gap-2 text-green-700 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Гласувано</span>
                     </div>
                   )}
                 </div>
@@ -244,6 +233,207 @@ export function VotingPage() {
           })}
         </div>
       )}
+
+      {/* Modal за гласуване */}
+      {selectedPoll && (
+        <VotingModal
+          poll={selectedPoll}
+          onClose={() => setSelectedPoll(null)}
+          onVote={handleVote}
+          votingPollId={votingPollId}
+          getPollStatus={getPollStatus}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal компонент за гласуване
+interface VotingModalProps {
+  poll: PollWithResults;
+  onClose: () => void;
+  onVote: (pollId: number, optionId: number) => Promise<void>;
+  votingPollId: number | null;
+  getPollStatus: (poll: PollWithResults) => string;
+}
+
+function VotingModal({ poll, onClose, onVote, votingPollId, getPollStatus }: VotingModalProps) {
+  const status = getPollStatus(poll);
+  const canVote = status === 'active' && !poll.userVote;
+  const hasVoted = !!poll.userVote;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+            <CheckCircle className="w-4 h-4" />
+            Активно
+          </span>
+        );
+      case 'upcoming':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm">
+            <Clock className="w-4 h-4" />
+            Предстоящо
+          </span>
+        );
+      case 'ended':
+        return (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm">
+            <AlertCircle className="w-4 h-4" />
+            Приключило
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b sticky top-0 bg-white">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 pr-4">
+              <h2 className="text-gray-900 mb-2">{poll.title}</h2>
+              {poll.description && (
+                <p className="text-gray-600">{poll.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {hasVoted && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm whitespace-nowrap">
+                  <CheckCircle className="w-4 h-4" />
+                  Гласувано
+                </span>
+              )}
+              {getStatusBadge(status)}
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
+            <Calendar className="w-4 h-4" />
+            <span>
+              {new Date(poll.startAt).toLocaleDateString('bg-BG', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+              {' - '}
+              {new Date(poll.endAt).toLocaleDateString('bg-BG', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+        </div>
+
+        {/* Body - Опции */}
+        <div className="p-6">
+          <div className="space-y-3">
+            {poll.options?.map((option) => {
+              const isUserChoice = hasVoted && poll.userVote?.optionId === option.id;
+              
+              return (
+                <div key={option.id} className="relative">
+                  {canVote ? (
+                    <button
+                      onClick={() => {
+                        onVote(poll.id, option.id);
+                        onClose();
+                      }}
+                      disabled={votingPollId === poll.id}
+                      className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-900">{option.text}</span>
+                        {votingPollId === poll.id && (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        )}
+                      </div>
+                    </button>
+                  ) : (
+                    <div className={`p-4 rounded-lg border-2 ${
+                      isUserChoice 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className={isUserChoice ? 'text-green-900' : 'text-gray-900'}>
+                          {option.text}
+                        </span>
+                        {isUserChoice && (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {status === 'upcoming' && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                Гласуването ще започне на{' '}
+                {new Date(poll.startAt).toLocaleDateString('bg-BG', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          )}
+
+          {hasVoted && status === 'active' && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800 text-sm">
+                ✓ Вие вече гласувахте в това гласуване на{' '}
+                {new Date(poll.userVote!.votedAt).toLocaleDateString('bg-BG', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          )}
+
+          {status === 'ended' && (
+            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-gray-700 text-sm">
+                Гласуването приключи на{' '}
+                {new Date(poll.endAt).toLocaleDateString('bg-BG', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
