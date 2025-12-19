@@ -3,6 +3,7 @@ import { Vote, Plus, Trash2, X, Calendar, CheckCircle, AlertCircle, Clock, Edit2
 import { pollService, type CreatePollRequest, type UpdatePollRequest, type Poll, type PollType } from '../services/pollService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
+import { DateTimePicker } from './ui/datetime-picker';
 
 export function VotingManagement() {
   const { selectedBuilding } = useSelection();
@@ -190,7 +191,7 @@ export function VotingManagement() {
         </div>
       </div>
 
-{/* Филтри */}
+      {/* Филтри */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-2 flex-wrap">
@@ -233,7 +234,7 @@ export function VotingManagement() {
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Vote className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-gray-900 mb-2">
-            {filterType === 'ALL' && 'Няма създадени гласувания'}
+            {filterType === 'ALL' && 'Няма създадени гласувани'}
             {filterType === 'ACTIVE' && 'Няма активни гласувания'}
             {filterType === 'HISTORY' && 'Няма приключили гласувания'}
           </h3>
@@ -389,7 +390,7 @@ function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: P
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Информация за гласуване</h2>
@@ -430,22 +431,34 @@ function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: P
           {/* Дати */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 mb-2">Начална дата *</label>
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Calendar className="w-4 h-4" />
+                Начална дата *
+              </label>
               <input
                 type="datetime-local"
                 value={new Date(poll.startAt).toISOString().slice(0, 16)}
                 readOnly
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  colorScheme: 'light',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Крайна дата *</label>
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Clock className="w-4 h-4" />
+                Крайна дата *
+              </label>
               <input
                 type="datetime-local"
                 value={new Date(poll.endAt).toISOString().slice(0, 16)}
                 readOnly
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  colorScheme: 'light',
+                }}
               />
             </div>
           </div>
@@ -594,7 +607,7 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Създаване на ново гласуване</h2>
@@ -638,27 +651,27 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
           {/* Дати */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 mb-2">Начална дата *</label>
-              <input
-                type="datetime-local"
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Calendar className="w-4 h-4" />
+                Начална дата *
+              </label>
+              <DateTimePicker
                 value={formData.startAt}
-                onChange={(e) => setFormData({ ...formData, startAt: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.startAt ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                onChange={(value) => setFormData({ ...formData, startAt: value })}
+                error={!!errors.startAt}
               />
               {errors.startAt && <p className="text-red-500 text-sm mt-1">{errors.startAt}</p>}
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Крайна дата *</label>
-              <input
-                type="datetime-local"
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Clock className="w-4 h-4" />
+                Крайна дата *
+              </label>
+              <DateTimePicker
                 value={formData.endAt}
-                onChange={(e) => setFormData({ ...formData, endAt: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.endAt ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                onChange={(value) => setFormData({ ...formData, endAt: value })}
+                error={!!errors.endAt}
               />
               {errors.endAt && <p className="text-red-500 text-sm mt-1">{errors.endAt}</p>}
             </div>
@@ -811,7 +824,7 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Редактиране на гласуване</h2>
@@ -855,27 +868,27 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
           {/* Дати */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 mb-2">Начална дата *</label>
-              <input
-                type="datetime-local"
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Calendar className="w-4 h-4" />
+                Начална дата *
+              </label>
+              <DateTimePicker
                 value={formData.startAt}
-                onChange={(e) => setFormData({ ...formData, startAt: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.startAt ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                onChange={(value) => setFormData({ ...formData, startAt: value })}
+                error={!!errors.startAt}
               />
               {errors.startAt && <p className="text-red-500 text-sm mt-1">{errors.startAt}</p>}
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Крайна дата *</label>
-              <input
-                type="datetime-local"
+              <label className="flex items-center gap-2 mb-2 text-gray-700">
+                <Clock className="w-4 h-4" />
+                Крайна дата *
+              </label>
+              <DateTimePicker
                 value={formData.endAt}
-                onChange={(e) => setFormData({ ...formData, endAt: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.endAt ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                onChange={(value) => setFormData({ ...formData, endAt: value })}
+                error={!!errors.endAt}
               />
               {errors.endAt && <p className="text-red-500 text-sm mt-1">{errors.endAt}</p>}
             </div>

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { eventService, type Notice, type CreateNoticeRequest, type NoticeType } from '../services/eventService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
+import { DateTimePicker } from './ui/datetime-picker';
 
 export function EventsManagement() {
   const { selectedBuilding } = useSelection();
@@ -276,28 +277,18 @@ interface NoticeModalProps {
 
 function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProps) {
   // При редактиране конвертираме UTC обратно в локално време
-  const getLocalDateTimeFromISO = (isoString: string) => {
+  const formatDateTimeLocal = (isoString: string) => {
     const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    
-    return {
-      date: `${year}-${month}-${day}`,
-      time: `${hours}:${minutes}`
-    };
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
   };
-
-  const initialDateTime = notice ? getLocalDateTimeFromISO(notice.noticeDateTime) : { date: '', time: '' };
 
   const [formData, setFormData] = useState({
     title: notice?.title || '',
     description: notice?.description || '',
     location: notice?.location || '',
-    date: initialDateTime.date,
-    time: initialDateTime.time,
+    dateTime: notice ? formatDateTimeLocal(notice.noticeDateTime) : '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -313,12 +304,8 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
       newErrors.description = 'Описанието е задължително';
     }
 
-    if (!formData.date) {
-      newErrors.date = 'Датата е задължителна';
-    }
-
-    if (!formData.time) {
-      newErrors.time = 'Часът е задължителен';
+    if (!formData.dateTime) {
+      newErrors.dateTime = 'Датата и часът са задължителни';
     }
 
     setErrors(newErrors);
@@ -336,7 +323,7 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
       setIsSubmitting(true);
 
       // Създаваме Date обект от локалното време и го конвертираме в ISO string (UTC)
-      const localDateTime = new Date(`${formData.date}T${formData.time}:00`);
+      const localDateTime = new Date(formData.dateTime);
       const noticeDateTime = localDateTime.toISOString();
       
       const requestData: CreateNoticeRequest = {
@@ -409,40 +396,29 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
             {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-2 text-gray-700">Дата *</label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.date ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
-              />
-              {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
-            </div>
-            <div>
-              <label className="block mb-2 text-gray-700">Час *</label>
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.time ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
-              />
-              {errors.time && <p className="text-red-500 text-sm mt-1">{errors.time}</p>}
-            </div>
+          <div>
+            <label className="flex items-center gap-2 mb-2 text-gray-700">
+              <Calendar className="w-4 h-4" />
+              Дата и час *
+            </label>
+            <DateTimePicker
+              value={formData.dateTime}
+              onChange={(value) => setFormData({ ...formData, dateTime: value })}
+              error={!!errors.dateTime}
+            />
+            {errors.dateTime && <p className="text-red-500 text-sm mt-1">{errors.dateTime}</p>}
           </div>
 
           <div>
-            <label className="block mb-2 text-gray-700">Място</label>
+            <label className="flex items-center gap-2 mb-2 text-gray-700">
+              <MapPin className="w-4 h-4" />
+              Място
+            </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-gray-400 transition-all"
               placeholder="Партер, вход А"
             />
           </div>

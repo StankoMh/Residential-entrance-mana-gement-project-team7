@@ -63,14 +63,13 @@ export function EventsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-gray-900 mb-2">События</h1>
+        <h1 className="text-gray-900 mb-2">Събития</h1>
         <p className="text-gray-600">Срещи и дейности на входа</p>
       </div>
 
       {/* Филтри */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-5 h-5 text-gray-400 flex-shrink-0" />
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterType('ALL')}
