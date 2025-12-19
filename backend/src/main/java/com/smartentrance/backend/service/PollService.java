@@ -47,9 +47,7 @@ public class PollService {
                 VotesOption optionEntity = new VotesOption();
                 optionEntity.setOptionText(optionText);
                 optionEntity.setPoll(poll);
-
                 poll.getOptions().add(optionEntity);
-
             }
         }
 
@@ -64,8 +62,8 @@ public class PollService {
         List<VotesPoll> polls;
 
         switch (filter) {
-            case FilterType.ACTIVE -> polls = pollRepository.findAllActive(buildingId, now);
-            case FilterType.HISTORY -> polls = pollRepository.findAllHistory(buildingId, now);
+            case ACTIVE -> polls = pollRepository.findAllActive(buildingId, now);
+            case HISTORY -> polls = pollRepository.findAllHistory(buildingId, now);
             default -> polls = pollRepository.findAllByBuildingIdOrderByCreatedAtDesc(buildingId);
         }
 
@@ -89,11 +87,12 @@ public class PollService {
         Unit unit = unitService.findById(request.unitId())
                 .orElseThrow(() -> new EntityNotFoundException("Unit not found"));
 
-        VotesOption optionRef = optionRepository.getReferenceById(request.optionId());
+        VotesOption option = optionRepository.findByIdAndPollId(request.optionId(), pollId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid option for this poll"));
 
         UserVote vote = userVoteRepository.findByPollIdAndUnitId(pollId, unit.getId())
                 .map(existingVote -> {
-                    existingVote.setOption(optionRef);
+                    existingVote.setOption(option);
                     existingVote.setUser(currentUser);
                     existingVote.setVotedAt(Instant.now());
                     return existingVote;
@@ -103,8 +102,7 @@ public class PollService {
                     newVote.setPoll(poll);
                     newVote.setUnit(unit);
                     newVote.setUser(currentUser);
-                    newVote.setOption(optionRef);
-                    newVote.setVotedAt(Instant.now());
+                    newVote.setOption(option);
                     return newVote;
                 });
 
@@ -116,16 +114,12 @@ public class PollService {
     @Transactional
     @PreAuthorize("@buildingSecurity.canManagePoll(#pollId, principal.user)")
     public void deletePoll(Integer pollId) {
-        VotesPoll poll = pollRepository.findById(pollId)
-                .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
-
-        if (!poll.getVotes().isEmpty()) {
+        if (userVoteRepository.existsByPollId(pollId)) {
             throw new IllegalStateException("Cannot delete poll with existing votes.");
         }
 
-        if (poll.getEndAt().isBefore(Instant.now())) {
-            throw new IllegalStateException("Cannot delete past polls.");
-        }
+        VotesPoll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new EntityNotFoundException("Poll not found"));
 
         pollRepository.delete(poll);
     }
@@ -140,13 +134,8 @@ public class PollService {
             throw new IllegalStateException("Cannot update polls that have already started.");
         }
 
-        if (request.title() != null) {
-            poll.setTitle(request.title());
-        }
-
-        if (request.description() != null) {
-            poll.setDescription(request.description());
-        }
+        if (request.title() != null) poll.setTitle(request.title());
+        if (request.description() != null) poll.setDescription(request.description());
 
         Instant newStart = request.startAt() != null ? request.startAt() : poll.getStartAt();
         Instant newEnd = request.endAt() != null ? request.endAt() : poll.getEndAt();
@@ -160,5 +149,4 @@ public class PollService {
 
         return pollMapper.toResponse(pollRepository.save(poll));
     }
-
 }

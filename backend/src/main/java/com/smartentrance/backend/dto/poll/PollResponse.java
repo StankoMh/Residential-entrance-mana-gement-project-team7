@@ -13,7 +13,9 @@ public record PollResponse(
         Instant startAt,
         Instant endAt,
         PollStatus status,
+        Long totalVotes,
+        Integer totalEligibleVoters,
         List<PollOptionResponse> options
 ) {
-    public record PollOptionResponse(Integer id, String text) {}
+    public record PollOptionResponse(Integer id, String text, Long voteCount) {}
 }

@@ -53,7 +53,7 @@ public class Unit {
     @ToString.Exclude
     private User responsibleUser;
 
-    @Column(nullable = false)
+    @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
     @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, orphanRemoval = true)

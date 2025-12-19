@@ -20,4 +20,6 @@ public interface UnitRepository extends JpaRepository<Unit, Integer> {
     boolean existsByBuildingIdAndResponsibleUserId(Integer buildingId, Integer userId);
 
     List<Unit> findAllByBuildingIdOrderByUnitNumberAsc(Integer buildingId);
+
+    int countByBuildingId(Integer buildingId);
 }

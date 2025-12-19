@@ -1,7 +1,7 @@
 package com.smartentrance.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,27 +24,28 @@ public class UserVote {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "poll_id", nullable = false)
-    @NotNull
+    @JsonIgnore
     @ToString.Exclude
     private VotesPoll poll;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "unit_id", nullable = false)
-    @NotNull
+    @JoinColumn(name = "option_id", nullable = false)
+    @JsonIgnore
     @ToString.Exclude
-    private Unit unit;
+    private VotesOption option;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @NotNull
+    @JsonIgnore
     @ToString.Exclude
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_id", nullable = false)
-    @NotNull
+    @JoinColumn(name = "unit_id", nullable = false)
+    @JsonIgnore
     @ToString.Exclude
-    private VotesOption option;
+    private Unit unit;
+
 
     @Column(name = "voted_at", nullable = false)
     private Instant votedAt;

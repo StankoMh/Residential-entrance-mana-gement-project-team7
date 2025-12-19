@@ -25,8 +25,18 @@ public class PollMapper {
         }
 
         List<PollResponse.PollOptionResponse> options = poll.getOptions().stream()
-                .map(opt -> new PollResponse.PollOptionResponse(opt.getId(), opt.getOptionText()))
+                .map(opt -> new PollResponse.PollOptionResponse(
+                        opt.getId(),
+                        opt.getOptionText(),
+                        (long) opt.getVotes().size()
+                ))
                 .toList();
+
+        Long totalVotes = options.stream()
+                .mapToLong(PollResponse.PollOptionResponse::voteCount)
+                .sum();
+
+        int totalEligible = poll.getEligibleVotersCount() != null ? poll.getEligibleVotersCount() : 0;
 
         return new PollResponse(
                 poll.getId(),
@@ -36,6 +46,8 @@ public class PollMapper {
                 poll.getStartAt(),
                 poll.getEndAt(),
                 status,
+                totalVotes,
+                totalEligible,
                 options
         );
     }

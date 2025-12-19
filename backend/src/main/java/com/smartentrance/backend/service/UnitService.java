@@ -57,7 +57,7 @@ public class UnitService {
     }
 
     @Transactional
-    @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal)")
+    @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal.user)")
     public void verifyUnit(Integer unitId) {
         Unit unit = unitRepository.findById(unitId)
                 .orElseThrow(() -> new EntityNotFoundException("Unit not found"));

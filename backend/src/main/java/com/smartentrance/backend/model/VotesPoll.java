@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.Formula;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,19 +39,22 @@ public class VotesPoll {
     @NotNull
     private Instant endAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     @ToString.Exclude
     private User createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "building_id", nullable = false)
+    @JsonIgnore
     @ToString.Exclude
     private Building building;
 
+    @Formula("(SELECT COUNT(*) FROM units u WHERE u.building_id = building_id AND u.is_verified = true)")
+    private Integer eligibleVotersCount;
+
     @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    @ToString.Exclude
     private List<VotesOption> options = new ArrayList<>();
 
     @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -61,12 +65,8 @@ public class VotesPoll {
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 }
