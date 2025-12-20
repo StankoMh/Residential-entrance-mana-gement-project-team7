@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Vote, Clock, TrendingUp, AlertCircle, Calendar, Filter, X } from 'lucide-react';
-import { pollService, type PollWithResults, type PollType } from '../services/pollService';
+import { pollService, type Poll, type PollType } from '../services/pollService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
 
 export function VotingPage() {
   const { selectedUnit } = useSelection();
-  const [polls, setPolls] = useState<PollWithResults[]>([]);
+  const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [votingPollId, setVotingPollId] = useState<number | null>(null);
   const [filterType, setFilterType] = useState<PollType>('ACTIVE');
-  const [selectedPoll, setSelectedPoll] = useState<PollWithResults | null>(null);
+  const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
 
   useEffect(() => {
     if (selectedUnit?.buildingId) {
@@ -29,7 +29,7 @@ export function VotingPage() {
     try {
       setLoading(true);
       setError('');
-      const data = await pollService.getPollsWithResults(selectedUnit.buildingId, filterType);
+      const data = await pollService.getAllPolls(selectedUnit.buildingId, filterType);
       setPolls(data);
     } catch (err) {
       console.error('Error loading polls:', err);
@@ -65,7 +65,7 @@ export function VotingPage() {
     }
   };
 
-  const getPollStatus = (poll: PollWithResults) => {
+  const getPollStatus = (poll: Poll) => {
     const now = new Date();
     const startDate = new Date(poll.startAt);
     const endDate = new Date(poll.endAt);
@@ -185,7 +185,7 @@ export function VotingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {polls.map((poll) => {
             const status = getPollStatus(poll);
-            const hasVoted = !!poll.userVote;
+            const hasVoted = poll.userVotedOptionId !== null;
 
             return (
               <div
@@ -249,17 +249,17 @@ export function VotingPage() {
 
 // Modal компонент за гласуване
 interface VotingModalProps {
-  poll: PollWithResults;
+  poll: Poll;
   onClose: () => void;
   onVote: (pollId: number, optionId: number) => Promise<void>;
   votingPollId: number | null;
-  getPollStatus: (poll: PollWithResults) => string;
+  getPollStatus: (poll: Poll) => string;
 }
 
 function VotingModal({ poll, onClose, onVote, votingPollId, getPollStatus }: VotingModalProps) {
   const status = getPollStatus(poll);
-  const canVote = status === 'active' && !poll.userVote;
-  const hasVoted = !!poll.userVote;
+  const hasVoted = poll.userVotedOptionId !== null;
+  const canVote = status === 'active' && !hasVoted;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -344,9 +344,23 @@ function VotingModal({ poll, onClose, onVote, votingPollId, getPollStatus }: Vot
 
         {/* Body - Опции */}
         <div className="p-6">
+          {/* Статистика */}
+          {(hasVoted || status === 'ended') && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-gray-600">Общо гласували:</span>
+                <span className="text-gray-900">
+                  {poll.totalVotes} от {poll.totalEligibleVoters} ({Math.round((poll.totalVotes / poll.totalEligibleVoters) * 100)}%)
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             {poll.options?.map((option) => {
-              const isUserChoice = hasVoted && poll.userVote?.optionId === option.id;
+              const isUserChoice = hasVoted && poll.userVotedOptionId === option.id;
+              const percentage = poll.totalVotes > 0 ? Math.round((option.voteCount / poll.totalVotes) * 100) : 0;
+              const showResults = hasVoted || status === 'ended';
               
               return (
                 <div key={option.id} className="relative">
@@ -367,18 +381,45 @@ function VotingModal({ poll, onClose, onVote, votingPollId, getPollStatus }: Vot
                       </div>
                     </button>
                   ) : (
-                    <div className={`p-4 rounded-lg border-2 ${
+                    <div className={`relative overflow-hidden rounded-lg border-2 ${
                       isUserChoice 
-                        ? 'border-green-500 bg-green-50' 
-                        : 'border-gray-200 bg-gray-50'
+                        ? 'border-green-500' 
+                        : 'border-gray-200'
                     }`}>
-                      <div className="flex items-center justify-between">
-                        <span className={isUserChoice ? 'text-green-900' : 'text-gray-900'}>
-                          {option.text}
-                        </span>
-                        {isUserChoice && (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        )}
+                      {/* Progress bar background */}
+                      {showResults && (
+                        <div 
+                          className={`absolute inset-0 transition-all ${
+                            isUserChoice ? 'bg-green-100' : 'bg-blue-50'
+                          }`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      )}
+                      
+                      {/* Content */}
+                      <div className="relative p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={isUserChoice ? 'text-green-900' : 'text-gray-900'}>
+                              {option.text}
+                            </span>
+                            {isUserChoice && (
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            )}
+                          </div>
+                          {showResults && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-gray-900">
+                                {option.voteCount} {option.voteCount === 1 ? 'глас' : 'гласа'}
+                              </span>
+                              <span className={`px-2 py-1 rounded ${
+                                isUserChoice ? 'bg-green-600 text-white' : 'bg-gray-700 text-white'
+                              }`}>
+                                {percentage}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -405,14 +446,7 @@ function VotingModal({ poll, onClose, onVote, votingPollId, getPollStatus }: Vot
           {hasVoted && status === 'active' && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-800 text-sm">
-                ✓ Вие вече гласувахте в това гласуване на{' '}
-                {new Date(poll.userVote!.votedAt).toLocaleDateString('bg-BG', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                ✓ Вие вече гласувахте в това гласуване
               </p>
             </div>
           )}

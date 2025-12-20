@@ -390,8 +390,8 @@ function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: P
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b sticky top-0 bg-white">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Информация за гласуване</h2>
             <button
@@ -403,27 +403,42 @@ function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: P
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Заглавие */}
-          <div>
-            <label className="block text-gray-700 mb-2">Заглавие *</label>
-            <input
-              type="text"
-              value={poll.title}
-              readOnly
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Напр. Одобрение на бюджет за 2025"
-            />
+        <div className="p-4 space-y-4">
+          {/* Заглавие и Статистика */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-2">Заглавие *</label>
+              <input
+                type="text"
+                value={poll.title}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Напр. Одобрение на бюджет за 2025"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-2">Статистика</label>
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-600">Гласували:</span>
+                  <span className="text-gray-900">
+                    {poll.totalVotes} от {poll.totalEligibleVoters}
+                  </span>
+                </div>
+                {getStatusBadge(status)}
+              </div>
+            </div>
           </div>
 
           {/* Описание */}
           <div>
-            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
+            <label className="block text-gray-700 mb-2">Описание</label>
             <textarea
               value={poll.description || ''}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
+              rows={2}
               placeholder="Допълнителна информация за гласуването..."
             />
           </div>
@@ -465,27 +480,39 @@ function PollManagementModal({ poll, onClose, getPollStatus, getStatusBadge }: P
 
           {/* Опции */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-gray-700">Опции за гласуване *</label>
-            </div>
-
-            <div className="space-y-3">
-              {poll.options?.map((option, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={option.text}
-                    readOnly
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={`Опция ${index + 1}`}
-                  />
-                </div>
-              ))}
+            <label className="block text-gray-700 mb-2">Опции и резултати</label>
+            <div className="space-y-2">
+              {poll.options?.map((option, index) => {
+                const maxVotes = Math.max(...poll.options.map(o => o.voteCount));
+                const barWidth = maxVotes > 0 ? (option.voteCount / maxVotes) * 100 : 0;
+                
+                return (
+                  <div key={index} className="relative">
+                    <div className="relative overflow-hidden rounded-lg border-2 border-gray-200">
+                      {/* Progress bar background */}
+                      <div 
+                        className="absolute inset-0 bg-blue-50 transition-all"
+                        style={{ width: `${barWidth}%` }}
+                      />
+                      
+                      {/* Content */}
+                      <div className="relative p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-900">{option.text}</span>
+                          <span className="px-3 py-1 rounded bg-gray-700 text-white text-sm">
+                            {option.voteCount} {option.voteCount === 1 ? 'глас' : 'гласа'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Бутон за затваряне */}
-          <div className="flex justify-end pt-4 border-t">
+          <div className="flex justify-end pt-2 border-t">
             <button
               type="button"
               onClick={onClose}
@@ -607,8 +634,8 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b sticky top-0 bg-white">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Създаване на ново гласуване</h2>
             <button
@@ -620,32 +647,22 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Заглавие */}
-          <div>
-            <label className="block text-gray-700 mb-2">Заглавие *</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-              }`}
-              placeholder="Напр. Одобрение на бюджет за 2025"
-            />
-            {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-          </div>
-
-          {/* Описание */}
-          <div>
-            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              placeholder="Допълнителна информация за гласуването..."
-            />
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Заглавие и Дати в един ред */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-3">
+              <label className="block text-gray-700 mb-2">Заглавие *</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                placeholder="Напр. Одобрение на бюджет за 2025"
+              />
+              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+            </div>
           </div>
 
           {/* Дати */}
@@ -677,9 +694,21 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
             </div>
           </div>
 
+          {/* Описание */}
+          <div>
+            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={2}
+              placeholder="Допълнителна информация за гласуването..."
+            />
+          </div>
+
           {/* Опции */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <label className="block text-gray-700">Опции за гласуване *</label>
               <button
                 type="button"
@@ -691,7 +720,7 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {formData.options.map((option, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
@@ -717,7 +746,7 @@ function CreatePollModal({ buildingId, onClose, onSuccess }: CreatePollModalProp
           </div>
 
           {/* Бутони */}
-          <div className="flex items-center gap-3 pt-4 border-t">
+          <div className="flex items-center gap-3 pt-2 border-t">
             <button
               type="button"
               onClick={onClose}
@@ -824,8 +853,8 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b sticky top-0 bg-white">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b sticky top-0 bg-white">
           <div className="flex items-center justify-between">
             <h2 className="text-gray-900">Редактиране на гласуване</h2>
             <button
@@ -837,7 +866,7 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Заглавие */}
           <div>
             <label className="block text-gray-700 mb-2">Заглавие *</label>
@@ -851,18 +880,6 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
               placeholder="Напр. Одобрение на бюджет за 2025"
             />
             {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-          </div>
-
-          {/* Описание */}
-          <div>
-            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              placeholder="Допълнителна информация за гласуването..."
-            />
           </div>
 
           {/* Дати */}
@@ -894,8 +911,20 @@ function EditPollModal({ poll, onClose, onSuccess }: EditPollModalProps) {
             </div>
           </div>
 
+          {/* Описание */}
+          <div>
+            <label className="block text-gray-700 mb-2">Описание (опционално)</label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={2}
+              placeholder="Допълнителна информация за гласуването..."
+            />
+          </div>
+
           {/* Бутони */}
-          <div className="flex items-center gap-3 pt-4 border-t">
+          <div className="flex items-center gap-3 pt-2 border-t">
             <button
               type="button"
               onClick={onClose}
