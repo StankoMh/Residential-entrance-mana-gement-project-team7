@@ -1,76 +1,67 @@
 package com.smartentrance.backend.model;
 
-import com.smartentrance.backend.model.enums.PaymentStatus;
+import com.smartentrance.backend.model.enums.*;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "transactions")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-public class Payment {
+public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "unit_fee_id", nullable = false)
-    @NotNull
-    @ToString.Exclude
-    private UnitFee unitFee;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    @ToString.Exclude
-    private User user;
-
-    @Column(nullable = false)
-    private BigDecimal netAmount;
-
-    @Column(nullable = false)
-    private BigDecimal grossAmount;
-
-    @Column(nullable = false)
-    private BigDecimal feeAmount;
-
-    @Column(name = "payment_date")
-    private Instant paymentDate;
-
-    @Column(name = "stripe_payment_intent_id", unique = true)
-    private String stripePaymentIntentId;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    private PaymentStatus status = PaymentStatus.PENDING;
+    @Column(nullable = false)
+    private TransactionType type;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod paymentMethod;
 
-    @Column(name = "updated_at")
-    private Instant updatedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fund_type")
+    private FundType fundType;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TransactionSplit> split = new ArrayList<>();
 
-        if (this.paymentDate == null) {
-            this.paymentDate = Instant.now();
-        }
+    public void addSplit(FundType fund, BigDecimal value) {
+        TransactionSplit split = new TransactionSplit(this, fund, value);
+        this.split.add(split);
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
+    private String description;
+
+    @Column(name = "reference_id")
+    private String referenceId;
+
+    @Column(name = "proof_url")
+    private String proofUrl;
+
+    @Column(name = "external_proof_url")
+    private String externalProofUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_status", nullable = false)
+    private TransactionStatus status;
+
+    @Column(nullable = false)
+    private Instant createdAt = Instant.now();
 }

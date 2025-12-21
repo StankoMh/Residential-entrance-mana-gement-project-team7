@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserVoteRepository extends JpaRepository<UserVote, Integer> {
-    Optional<UserVote> findByPollIdAndUnitId(Integer pollId, Integer unitId);
+    Optional<UserVote> findByPollIdAndUnitId(Integer pollId, Long unitId);
 
     boolean existsByPollId(Integer pollId);
 

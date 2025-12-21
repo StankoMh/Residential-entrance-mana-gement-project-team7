@@ -19,5 +19,7 @@ public record BuildingCreateRequest(
 
         @Min(value = 1, message = "The building must have at least one unit")
         @Max(value = 100, message = "The building cannot have more than 100 units")
-        Integer totalUnits
+        Integer totalUnits,
+
+        String iban
 ) {}

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UnitRepository extends JpaRepository<Unit, Integer> {
+public interface UnitRepository extends JpaRepository<Unit, Long> {
 
     Optional<Unit> findByAccessCode(String accessCode);
 
@@ -21,5 +21,5 @@ public interface UnitRepository extends JpaRepository<Unit, Integer> {
 
     List<Unit> findAllByBuildingIdOrderByUnitNumberAsc(Integer buildingId);
 
-    int countByBuildingId(Integer buildingId);
+    List<Unit> findAllByBuildingId(Integer buildingId);
 }

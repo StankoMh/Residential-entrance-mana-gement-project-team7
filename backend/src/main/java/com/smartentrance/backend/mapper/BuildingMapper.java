@@ -14,6 +14,7 @@ public class BuildingMapper {
                 building.getAddress(),
                 building.getEntrance(),
                 building.getUnits() != null ? building.getUnits().size() : 0,
+                building.getIban(),
                 mapToManagerInfo(building.getManager())
         );
     }
@@ -25,6 +26,7 @@ public class BuildingMapper {
                 building.getAddress(),
                 building.getEntrance(),
                 totalUnits,
+                building.getIban(),
                 mapToManagerInfo(building.getManager())
         );
     }
@@ -33,7 +35,6 @@ public class BuildingMapper {
         if (manager == null) {
             return null;
         }
-
         return new BuildingResponse.ManagerInfo(
                 manager.getId(),
                 manager.getFirstName(),
