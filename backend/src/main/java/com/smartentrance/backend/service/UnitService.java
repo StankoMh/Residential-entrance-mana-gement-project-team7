@@ -35,6 +35,7 @@ public class UnitService {
     }
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public UnitResponse joinUnit(UnitJoinRequest request, User currentUser) {
         Unit unit = unitRepository.findByAccessCode(request.accessCode())
                 .orElseThrow(() -> new EntityNotFoundException("Invalid access code."));
@@ -58,7 +59,7 @@ public class UnitService {
     }
 
     @Transactional
-    @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal.user)")
+    @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal.user) or @buildingSecurity.isUnitOwner(#unitId, principal.user)")
     public UnitResponse updateUnit(Long unitId, UnitUpdateRequest request, User user) {
         Unit unit = unitRepository.findById(unitId)
                 .orElseThrow(() -> new EntityNotFoundException("Unit not found"));
@@ -66,7 +67,7 @@ public class UnitService {
         unit.setArea(request.area());
         unit.setResidentsCount(request.residentsCount());
 
-        boolean isManager = unit.getBuilding().getManager().equals(user);
+        boolean isManager = unit.getBuilding().getManager().getId().equals(user.getId());
         unit.setVerified(isManager);
 
         Unit savedUnit = unitRepository.save(unit);
@@ -77,11 +78,8 @@ public class UnitService {
         return unitMapper.toResidentResponse(savedUnit, balance, hasPending);
     }
 
-    // Нова функционалност: Смяна на собственост
-    // UnitService.java
-
     @Transactional
-    @PreAuthorize("@buildingSecurity.isManagerForUnit(#unitId, principal.user)")
+    @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal.user)")
     public UnitResponse transferOwnership(Long unitId, boolean keepBalance, String protocolUrl) {
 
         Unit unit = unitRepository.findById(unitId)
@@ -91,13 +89,12 @@ public class UnitService {
             financeService.clearUnitBalance(unitId);
         }
         if (protocolUrl != null) {
-            financeService.createSystemNote(unitId, "Смяна на собственост / Ownership Transfer", protocolUrl);
+            financeService.createSystemNote(unitId, "Ownership Transfer", protocolUrl);
         }
 
-        unit.setResponsibleUser(null); // Махаме стария
-        unit.setVerified(false);       // Новият трябва да се верифицира
-        unit.setResidentsCount(0);     // Новият ще каже колко хора са
-        unit.setAccessCode(generateUniqueAccessCode()); // Нова парола за новия човек
+        unit.setResponsibleUser(null);
+        unit.setVerified(false);
+        unit.setResidentsCount(0);
 
         Unit saved = unitRepository.save(unit);
 
@@ -126,6 +123,7 @@ public class UnitService {
                 .toList();
     }
 
+    @PreAuthorize("isAuthenticated()")
     public List<UnitResponse> getMyUnits(User user) {
         return unitRepository.findAllByResponsibleUserId(user.getId())
                 .stream()

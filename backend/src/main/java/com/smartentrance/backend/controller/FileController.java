@@ -17,7 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/uploads")
 @RequiredArgsConstructor
-public class UploadController {
+public class FileController {
 
     private final FileStorageService fileStorageService;
 
@@ -31,10 +31,13 @@ public class UploadController {
                 .path(fileName)
                 .toUriString();
 
+        String contentType = file.getContentType();
+        if (contentType == null) contentType = "application/octet-stream";
+
         return ResponseEntity.ok(Map.of(
                 "fileName", fileName,
                 "url", fileDownloadUri,
-                "type", file.getContentType(),
+                "type", contentType,
                 "size", String.valueOf(file.getSize())
         ));
     }

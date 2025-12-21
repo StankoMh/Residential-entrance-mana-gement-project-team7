@@ -4,22 +4,20 @@ import com.smartentrance.backend.service.FinanceService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
-import com.stripe.model.ChargeCollection;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @RestController
 @RequestMapping("/api/webhooks")
 @RequiredArgsConstructor
-@Slf4j
 public class StripeWebhookController {
 
     private final FinanceService financeService;
@@ -36,10 +34,8 @@ public class StripeWebhookController {
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
         } catch (SignatureVerificationException e) {
-            log.error("Invalid Signature", e);
             return ResponseEntity.status(400).body("Invalid signature");
         } catch (Exception e) {
-            log.error("Webhook error", e);
             return ResponseEntity.status(400).body("Webhook error");
         }
 
@@ -55,32 +51,38 @@ public class StripeWebhookController {
     }
 
     private void handlePaymentSuccess(PaymentIntent intent) {
-        log.info("Payment Succeeded: " + intent.getId());
-
         String unitIdStr = intent.getMetadata().get("unit_id");
 
         if (unitIdStr != null) {
             Long unitId = Long.parseLong(unitIdStr);
-            BigDecimal amount = BigDecimal.valueOf(intent.getAmount()).divide(BigDecimal.valueOf(100));
+            BigDecimal grossAmount = BigDecimal.valueOf(intent.getAmount()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
             String receiptUrl = null;
+            BigDecimal stripeFee = BigDecimal.ZERO;
 
             String latestChargeId = intent.getLatestCharge();
 
             if (latestChargeId != null) {
                 try {
-                    Charge charge = Charge.retrieve(latestChargeId);
+                    com.stripe.param.ChargeRetrieveParams params =
+                            com.stripe.param.ChargeRetrieveParams.builder()
+                                    .addExpand("balance_transaction")
+                                    .build();
+
+                    Charge charge = Charge.retrieve(latestChargeId, params, null);
                     receiptUrl = charge.getReceiptUrl();
 
-                    log.info("Stripe Receipt URL retrieved: " + receiptUrl);
+                    if (charge.getBalanceTransactionObject() != null) {
+                        long feeInCents = charge.getBalanceTransactionObject().getFee();
+                        stripeFee = BigDecimal.valueOf(feeInCents).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    }
+
                 } catch (StripeException e) {
-                    log.error("Failed to retrieve charge details for receipt URL", e);
+                    System.err.println("Error retrieving charge details: " + e.getMessage());
                 }
             }
 
-            financeService.recordStripeSuccess(unitId, amount, intent.getId(), receiptUrl);
-
-            log.info("Successfully recorded deposit for Unit ID: " + unitId);
+            financeService.recordStripeSuccess(unitId, grossAmount, stripeFee, intent.getId(), receiptUrl);
         }
     }
 }

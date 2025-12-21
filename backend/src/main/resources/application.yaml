@@ -40,8 +40,6 @@ payment:
   stripe:
     api-key: ${STRIPE_API_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-    fee-percent: 0.015
-    fixed-fee: 0.25
 
 file:
     upload-dir: ./backend/uploads

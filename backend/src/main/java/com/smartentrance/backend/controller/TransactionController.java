@@ -1,16 +1,16 @@
 package com.smartentrance.backend.controller;
 
-import com.smartentrance.backend.dto.document.ReceiptDetails;
 import com.smartentrance.backend.model.Transaction;
 import com.smartentrance.backend.repository.TransactionRepository;
 import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.FinanceService;
-import com.smartentrance.backend.service.ReceiptDataService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 public class TransactionController {
 
     private final FinanceService financeService;
-    private final ReceiptDataService receiptDataService;
     private final TransactionRepository transactionRepository;
 
     @PostMapping("/{transactionId}/approve")
@@ -34,10 +33,11 @@ public class TransactionController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/{transactionId}/receipt-details")
-    public ResponseEntity<ReceiptDetails> getReceiptDetails(@PathVariable Long transactionId) {
+    @GetMapping("/{transactionId}/receipt")
+    public ResponseEntity<Map<String, String>> getReceipt(@PathVariable Long transactionId) {
         Transaction t = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-        return ResponseEntity.ok(receiptDataService.prepareReceiptData(t));
+
+        return ResponseEntity.ok(Map.of("proofUrl", t.getProofUrl() != null ? t.getProofUrl() : ""));
     }
 }

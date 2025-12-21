@@ -16,18 +16,18 @@ public interface VotesPollRepository extends JpaRepository<VotesPoll, Integer> {
     List<VotesPoll> findAllByBuildingIdOrderByCreatedAtDesc(@Param("buildingId") Integer buildingId);
 
     @Query("""
-        SELECT DISTINCT p FROM VotesPoll p 
+        SELECT DISTINCT p FROM VotesPoll p
         LEFT JOIN FETCH p.options
-        WHERE p.building.id = :buildingId 
+        WHERE p.building.id = :buildingId
         AND :now BETWEEN p.startAt AND p.endAt
         ORDER BY p.endAt ASC
     """)
     List<VotesPoll> findAllActive(@Param("buildingId") Integer buildingId, @Param("now") Instant now);
 
     @Query("""
-        SELECT DISTINCT p FROM VotesPoll p 
+        SELECT DISTINCT p FROM VotesPoll p
         LEFT JOIN FETCH p.options
-        WHERE p.building.id = :buildingId 
+        WHERE p.building.id = :buildingId
         AND p.endAt < :now
         ORDER BY p.endAt DESC
     """)

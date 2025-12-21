@@ -49,18 +49,7 @@ public class PdfReceiptService {
             Font linkFont = new Font(baseFont, 11, Font.UNDERLINE, new Color(0, 0, 255));
             Font footerFont = new Font(baseFont, 9, Font.ITALIC, Color.GRAY);
 
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100);
-
-            PdfPCell logoCell = new PdfPCell(new Phrase("SMART ENTRANCE", titleFont));
-            logoCell.setBorder(Rectangle.NO_BORDER);
-            logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-            headerTable.addCell(logoCell);
-
-            PdfPCell receiptTitleCell = new PdfPCell(new Phrase("OFFICIAL RECEIPT\nПЛАТЕЖЕН ДОКУМЕНТ", boldFont));
-            receiptTitleCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            receiptTitleCell.setBorder(Rectangle.NO_BORDER);
-            headerTable.addCell(receiptTitleCell);
+            PdfPTable headerTable = getPdfPTable(titleFont, boldFont);
 
             document.add(headerTable);
 
@@ -131,7 +120,8 @@ public class PdfReceiptService {
             table.addCell(totalLabel);
 
             Font amountFont = new Font(baseFont, 14, Font.BOLD, BRAND_COLOR);
-            PdfPCell totalValue = new PdfPCell(new Phrase(transaction.getAmount() + " " + currency, amountFont));
+            String formattedAmount = String.format("%.2f", transaction.getAmount());
+            PdfPCell totalValue = new PdfPCell(new Phrase(formattedAmount + " " + currency, amountFont));
             totalValue.setPadding(10f);
             totalValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
             totalValue.setBorderColor(BRAND_COLOR);
@@ -161,6 +151,22 @@ public class PdfReceiptService {
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF receipt", e);
         }
+    }
+
+    private static PdfPTable getPdfPTable(Font titleFont, Font boldFont) {
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+
+        PdfPCell logoCell = new PdfPCell(new Phrase("SMART ENTRANCE", titleFont));
+        logoCell.setBorder(Rectangle.NO_BORDER);
+        logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        headerTable.addCell(logoCell);
+
+        PdfPCell receiptTitleCell = new PdfPCell(new Phrase("OFFICIAL RECEIPT\nПЛАТЕЖЕН ДОКУМЕНТ", boldFont));
+        receiptTitleCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        receiptTitleCell.setBorder(Rectangle.NO_BORDER);
+        headerTable.addCell(receiptTitleCell);
+        return headerTable;
     }
 
     private void addStyledRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {

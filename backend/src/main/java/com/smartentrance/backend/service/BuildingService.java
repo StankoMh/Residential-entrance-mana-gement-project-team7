@@ -14,6 +14,7 @@ import com.smartentrance.backend.repository.DocumentRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class BuildingService {
     private final DocumentRepository documentRepository;
 
     @Transactional
+    @PreAuthorize("isAuthenticated()")
     public BuildingResponse createBuildingWithSkeleton(BuildingCreateRequest request, User manager) {
         if (buildingRepository.existsByGooglePlaceIdAndEntrance(request.googlePlaceId(), request.entrance().toUpperCase())) {
             throw new EntityExistsException("This building entrance is already registered.");
@@ -68,6 +70,7 @@ public class BuildingService {
     }
 
     @Transactional
+    @PreAuthorize("@buildingSecurity.isManager(#buildingId, principal.user)")
     public void updateBuildingBudgets(Integer buildingId, UpdateBudgetRequest req, User manager) {
         Building building = buildingRepository.findById(buildingId)
                 .orElseThrow(() -> new EntityNotFoundException("Building not found"));
@@ -107,6 +110,7 @@ public class BuildingService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("isAuthenticated()")
     public List<BuildingResponse> getManagedBuildings(User user) {
         return buildingRepository.findAllByManagerId(user.getId())
                 .stream().map(buildingMapper::toResponse).toList();

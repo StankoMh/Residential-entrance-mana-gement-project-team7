@@ -67,4 +67,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findAllByUnitIdOrderByCreatedAtDesc(Long unitId);
 
     List<Transaction> findAllByUnitIdAndTypeOrderByCreatedAtDesc(Long unitId, TransactionType type);
+
+    Optional<Transaction> findByProofUrl(String url);
 }

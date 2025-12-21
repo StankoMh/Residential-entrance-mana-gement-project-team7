@@ -10,6 +10,7 @@ import com.smartentrance.backend.repository.DocumentRepository;
 import com.smartentrance.backend.security.BuildingSecurity;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class BuildingDocumentService {
     private final BuildingRepository buildingRepository;
     private final BuildingSecurity buildingSecurity;
 
+    @PreAuthorize("@buildingSecurity.hasAccess(#buildingId, principal.user)")
     public List<DocumentResponse> getDocumentsForBuilding(Integer buildingId, User user) {
         List<BuildingDocument> docs;
         boolean isManager = buildingSecurity.isManager(buildingId, user);
@@ -37,6 +39,7 @@ public class BuildingDocumentService {
     }
 
     @Transactional
+    @PreAuthorize("@buildingSecurity.isManager(#buildingId, principal.user)")
     public void createDocument(Integer buildingId, CreateDocumentRequest req, User uploader) {
         Building building = buildingRepository.findById(buildingId)
                 .orElseThrow(() -> new EntityNotFoundException("Building not found"));
@@ -53,6 +56,7 @@ public class BuildingDocumentService {
         documentRepository.save(doc);
     }
 
+    @PreAuthorize("@buildingSecurity.canManageDocument(#documentId, principal.user)")
     @Transactional
     public void deleteDocument(Long documentId) {
         documentRepository.deleteById(documentId);

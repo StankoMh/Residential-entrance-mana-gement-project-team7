@@ -6,7 +6,6 @@ import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.BuildingDocumentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +35,7 @@ public class BuildingDocumentController {
     }
 
     @DeleteMapping("/{documentId}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long documentId) {
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long documentId, @PathVariable Integer buildingId) {
         documentService.deleteDocument(documentId);
         return ResponseEntity.ok().build();
     }
