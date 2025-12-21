@@ -51,7 +51,7 @@ public class VotesPoll {
     @ToString.Exclude
     private Building building;
 
-    @Formula("(SELECT COUNT(*) FROM units u WHERE u.building_id = building_id AND u.is_verified = true)")
+    @Formula("(SELECT COUNT(*) FROM units u WHERE u.building_id = id AND u.is_verified = true AND u.responsible_user_id IS NOT NULL)")
     private Integer eligibleVotersCount;
 
     @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)

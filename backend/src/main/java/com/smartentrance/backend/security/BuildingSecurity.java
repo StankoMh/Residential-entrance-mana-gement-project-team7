@@ -2,10 +2,7 @@ package com.smartentrance.backend.security;
 
 import com.smartentrance.backend.model.Building;
 import com.smartentrance.backend.model.User;
-import com.smartentrance.backend.repository.BuildingRepository;
-import com.smartentrance.backend.repository.NoticeRepository;
-import com.smartentrance.backend.repository.UnitRepository;
-import com.smartentrance.backend.repository.VotesPollRepository;
+import com.smartentrance.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +14,9 @@ public class BuildingSecurity {
     private final UnitRepository unitRepository;
     private final NoticeRepository noticeRepository;
     private final VotesPollRepository pollRepository;
+    private final TransactionRepository transactionRepository;
 
-    public boolean canManageUnit(Integer unitId, User user) {
+    public boolean canManageUnit(Long unitId, User user) {
         return unitRepository.findById(unitId)
                 .map(unit -> unit.getBuilding().getManager().getId().equals(user.getId()))
                 .orElse(false);
@@ -43,7 +41,7 @@ public class BuildingSecurity {
                 .orElse(false);
     }
 
-    public boolean canVote(Integer pollId, Integer unitId, User user) {
+    public boolean canVote(Integer pollId, Long unitId, User user) {
         return pollRepository.findById(pollId)
                 .map(poll -> unitRepository.findById(unitId)
                         .map(unit -> {
@@ -52,15 +50,38 @@ public class BuildingSecurity {
 
                             boolean sameBuilding = unit.getBuilding().getId().equals(poll.getBuilding().getId());
 
-                            return isResponsible && sameBuilding;
+                            return isResponsible && sameBuilding && unit.isVerified();
                         })
                         .orElse(false))
                 .orElse(false);
     }
 
+    public boolean canManageUnitByTransactionId(Long transactionId, User user) {
+        return transactionRepository.findById(transactionId)
+                .map(t -> canManageUnit(t.getUnit().getId(), user))
+                .orElse(false);
+    }
+
+    public boolean isUnitOwner(Long unitId, User user) {
+        return unitRepository.findById(unitId)
+                .map(unit -> unit.getResponsibleUser() != null &&
+                        unit.getResponsibleUser().getId().equals(user.getId()))
+                .orElse(false);
+    }
+
+    public boolean canAccessUnitFinance(Long unitId, User user) {
+        return isUnitOwner(unitId, user) || canManageUnit(unitId, user);
+    }
+
     public boolean canManagePoll(Integer pollId, User user) {
         return pollRepository.findById(pollId)
                 .map(poll -> poll.getBuilding().getManager().getId().equals(user.getId()))
+                .orElse(false);
+    }
+
+    public boolean hasAccessByPollId(Integer pollId, User user) {
+        return pollRepository.findById(pollId)
+                .map(poll -> hasAccess(poll.getBuilding().getId(), user))
                 .orElse(false);
     }
 }

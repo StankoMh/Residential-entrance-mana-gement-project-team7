@@ -1,7 +1,6 @@
 package com.smartentrance.backend.controller;
 
-import com.smartentrance.backend.dto.building.BuildingCreateRequest;
-import com.smartentrance.backend.dto.building.BuildingResponse;
+import com.smartentrance.backend.dto.building.*;
 import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.BuildingService;
 import jakarta.validation.Valid;
@@ -22,14 +21,28 @@ public class BuildingController {
     @PostMapping
     public ResponseEntity<BuildingResponse> createBuilding(
             @Valid @RequestBody BuildingCreateRequest request,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(buildingService.createBuildingWithSkeleton(request, userPrincipal.user()));
+        return ResponseEntity.ok(buildingService.createBuildingWithSkeleton(request, principal.user()));
     }
 
     @GetMapping("/managed")
-    public ResponseEntity<List<BuildingResponse>> getMyManagedBuildings(@AuthenticationPrincipal UserPrincipal userPrincipal) {
-        return ResponseEntity.ok(buildingService.getManagedBuildings(userPrincipal.user()));
+    public ResponseEntity<List<BuildingResponse>> getMyManagedBuildings(@AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(buildingService.getManagedBuildings(principal.user()));
     }
 
+    @GetMapping("/{buildingId}/budget")
+    public ResponseEntity<UpdateBudgetRequest> getBudgets(@PathVariable Integer buildingId) {
+        return ResponseEntity.ok(buildingService.getCurrentBudgets(buildingId));
+    }
+
+    @PutMapping("/{buildingId}/budget")
+    public ResponseEntity<Void> updateBudgets(
+            @PathVariable Integer buildingId,
+            @RequestBody UpdateBudgetRequest req,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        buildingService.updateBuildingBudgets(buildingId, req, principal.user());
+        return ResponseEntity.ok().build();
+    }
 }

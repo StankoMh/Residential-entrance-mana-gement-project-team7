@@ -4,10 +4,12 @@ import com.smartentrance.backend.dto.unit.UnitResponse;
 import com.smartentrance.backend.model.Unit;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 @Component
 public class UnitMapper {
 
-    public UnitResponse toManagementResponse(Unit unit) {
+    public UnitResponse toManagementResponse(Unit unit, BigDecimal balance, boolean hasPendingPayments) {
         return new UnitResponse(
                 unit.getId(),
                 unit.getUnitNumber(),
@@ -15,12 +17,16 @@ public class UnitMapper {
                 unit.getResidentsCount(),
                 unit.getAccessCode(),
                 unit.isVerified(),
+
+                balance,
+                hasPendingPayments,
+
                 null,
                 mapToOwnerInfo(unit)
         );
     }
 
-    public UnitResponse toResidentResponse(Unit unit) {
+    public UnitResponse toResidentResponse(Unit unit, BigDecimal balance, boolean hasPendingPayments) {
         return new UnitResponse(
                 unit.getId(),
                 unit.getUnitNumber(),
@@ -28,6 +34,8 @@ public class UnitMapper {
                 unit.getResidentsCount(),
                 null,
                 unit.isVerified(),
+                balance,
+                hasPendingPayments,
                 mapToBuildingInfo(unit),
                 mapToOwnerInfo(unit)
         );
@@ -37,7 +45,6 @@ public class UnitMapper {
         if (unit.getResponsibleUser() == null) {
             return null;
         }
-
         return new UnitResponse.OwnerInfo(
                 unit.getResponsibleUser().getId(),
                 unit.getResponsibleUser().getFirstName(),
@@ -47,6 +54,7 @@ public class UnitMapper {
     }
 
     private UnitResponse.BuildingInfo mapToBuildingInfo(Unit unit) {
+        if (unit.getBuilding() == null) return null;
         return new UnitResponse.BuildingInfo(
                 unit.getBuilding().getId(),
                 unit.getBuilding().getName(),

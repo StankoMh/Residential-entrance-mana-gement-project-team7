@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,19 @@ public class Building {
     @ToString.Exclude
     @Builder.Default
     private List<Unit> units = new ArrayList<>();
+
+    @Column
+    private BigDecimal repairBudget;
+
+    @Column
+    private BigDecimal maintenanceBudget;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "budget_protocol_id")
+    private BuildingDocument budgetProtocol;
+
+    @Column(length = 34)
+    private String iban;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
