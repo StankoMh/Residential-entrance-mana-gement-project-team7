@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Lock, ArrowLeft, Banknote, Building2 } from 'lucide-react';
+import { CreditCard, Lock, ArrowLeft, Banknote, Building2, Upload, FileText, X } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import { useSelection } from '../contexts/SelectionContext';
 import { FundType } from '../types/database';
 import { StripePaymentForm } from './StripePaymentForm';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(import.meta.env?.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 type PaymentMethod = 'stripe' | 'cash' | 'bank';
 
@@ -17,6 +21,7 @@ export function PaymentCheckout() {
   const [fundType, setFundType] = useState<FundType>(FundType.GENERAL);
   const [note, setNote] = useState('');
   const [bankReference, setBankReference] = useState('');
+  const [bankProofFile, setBankProofFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
@@ -101,8 +106,8 @@ export function PaymentCheckout() {
       return;
     }
 
-    if (!bankReference.trim()) {
-      setError('Моля, въведете референция на банковия превод');
+    if (!bankProofFile) {
+      setError('Моля, качете PDF файл с платежното нареждане');
       return;
     }
 
@@ -110,19 +115,56 @@ export function PaymentCheckout() {
     setError('');
 
     try {
-      await paymentService.createBankPayment(selectedUnit.unitId, {
-        amount: parseFloat(amount),
-        transactionReference: bankReference,
-        proofUrl: '' // Може да се добави upload на доказателство
-      });
+      console.log('Creating bank payment with file:', bankProofFile.name);
+      
+      // Метод 1: Опитваме да изпратим файла директно към /units/${unitId}/payments/bank
+      try {
+        await paymentService.createBankPaymentWithFile(
+          selectedUnit.unitId,
+          parseFloat(amount),
+          bankReference,
+          bankProofFile
+        );
+        console.log('Bank payment created successfully (direct file upload)');
+      } catch (directError: any) {
+        console.warn('Direct file upload failed, trying two-step approach:', directError);
+        
+        // Метод 2: Ако не работи, качваме файла първо и после изпращаме URL-a
+        const proofUrl = await paymentService.uploadPaymentProof(bankProofFile);
+        console.log('Proof file uploaded successfully. URL:', proofUrl);
+        
+        await paymentService.createBankPayment(selectedUnit.unitId, {
+          amount: parseFloat(amount),
+          transactionReference: bankReference,
+          proofUrl: proofUrl
+        });
+        console.log('Bank payment created successfully (two-step approach)');
+      }
 
       setIsProcessing(false);
       alert('Банковото плащане е регистрирано и чака одобрение от мениджъра');
       navigate('/dashboard/payments');
       
     } catch (err: any) {
+      console.error('Error creating bank payment:', err);
       setError(err.message || 'Грешка при регистриране на плащане');
       setIsProcessing(false);
+    }
+  };
+
+  const handleBankProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      
+      // Проверка дали файлът е PDF
+      if (file.type !== 'application/pdf') {
+        setError('Моля, изберете само PDF файл');
+        e.target.value = ''; // Изчистваме избора
+        return;
+      }
+      
+      setBankProofFile(file);
+      setError('');
     }
   };
 
@@ -156,15 +198,17 @@ export function PaymentCheckout() {
 
         {/* Stripe Form Overlay */}
         {showStripeForm && stripeClientSecret && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="max-w-lg w-full">
-              <StripePaymentForm
-                clientSecret={stripeClientSecret}
-                amount={parseFloat(amount)}
-                unitId={selectedUnit.unitId}
-                onSuccess={handleStripeSuccess}
-                onCancel={handleStripeCancel}
-              />
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-screen flex items-center justify-center p-4 py-8">
+              <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
+                <StripePaymentForm
+                  clientSecret={stripeClientSecret}
+                  amount={parseFloat(amount)}
+                  unitId={selectedUnit.unitId}
+                  onSuccess={handleStripeSuccess}
+                  onCancel={handleStripeCancel}
+                />
+              </Elements>
             </div>
           </div>
         )}
@@ -294,20 +338,58 @@ export function PaymentCheckout() {
                 )}
 
                 {paymentMethod === 'bank' && (
-                  <div>
-                    <label className="block text-gray-700 mb-2">
-                      Референция на превод *
-                    </label>
-                    <input
-                      type="text"
-                      value={bankReference}
-                      onChange={(e) => setBankReference(e.target.value)}
-                      placeholder="Въведете референция или номер на превода"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Плащането ще чака одобрение от мениджъра на входа
-                    </p>
+                  <div className="space-y-4">
+                    {/* Upload на PDF файл с платежното */}
+                    <div>
+                      <label className="block text-gray-700 mb-2">
+                        Платежно нареждане (PDF) *
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                        <input
+                          type="file"
+                          onChange={handleBankProofFileChange}
+                          className="hidden"
+                          id="bank-proof-upload"
+                          accept=".pdf,application/pdf"
+                        />
+                        <label htmlFor="bank-proof-upload" className="cursor-pointer">
+                          {bankProofFile ? (
+                            <div className="flex items-center justify-center gap-3">
+                              <FileText className="w-8 h-8 text-red-500" />
+                              <div className="text-left">
+                                <p className="text-gray-900">{bankProofFile.name}</p>
+                                <p className="text-sm text-gray-500">
+                                  {(bankProofFile.size / 1024).toFixed(2)} KB
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setBankProofFile(null);
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                              >
+                                <X className="w-5 h-5 text-gray-600" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-600 mb-1">
+                                Кликнете за избор на PDF файл
+                              </p>
+                              <p className="text-gray-400 text-sm">
+                                Качете скан или снимка на платежното нареждане
+                              </p>
+                            </>
+                          )}
+                        </label>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Плащането ще чака одобрение от мениджъра след преглед на документа
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -368,8 +450,17 @@ export function PaymentCheckout() {
                   <div className="flex justify-between text-gray-600">
                     <span>Фонд:</span>
                     <span className="text-sm text-right">
-                      {fundType === FundType.REPAIR ? 'Ремонти' : 'Поддръжка'}
+                      {fundType === FundType.REPAIR ? 'Ремонти' : 'Подръжка'}
                     </span>
+                  </div>
+                )}
+                {paymentMethod === 'bank' && bankProofFile && (
+                  <div className="flex flex-col gap-1 pt-2 border-t">
+                    <span className="text-gray-600 text-sm">Платежно нареждане:</span>
+                    <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                      <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-700 truncate">{bankProofFile.name}</span>
+                    </div>
                   </div>
                 )}
               </div>

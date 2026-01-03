@@ -141,9 +141,9 @@ export const unitService = {
   // Изтрий апартамент
   delete: async (id: number): Promise<void> => {
     try {
-      await api.delete(`/units/${id}`);
+      await api.delete(`/units/${id}/resident`);
     } catch (error) {
-      throw new Error('Апартаментът не може да бъде изтрит в момента');
+      throw new Error('Грешка при премахване на жител от апартамент');
     }
   },
 };

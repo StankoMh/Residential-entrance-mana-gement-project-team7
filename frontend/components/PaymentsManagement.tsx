@@ -1,23 +1,17 @@
-import {
-  Download,
-  Filter,
-  CheckCircle,
-  Clock,
-  XCircle,
-  DollarSign,
-  Save,
-  Zap,
-} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSelection } from "../contexts/SelectionContext";
 import { buildingService } from "../services/buildingService";
 import { paymentService } from "../services/paymentService";
+import { unitService } from "../services/unitService";
 import type { Transaction } from "../types/database";
 import {
   TransactionType,
   TransactionStatus,
+  FundType,
 } from "../types/database";
 import type { BudgetData } from "../services/buildingService";
+import type { UnitResponseFromAPI } from "../services/unitService";
+import { Banknote, CheckCircle, Clock, DollarSign, Download, Save, XCircle, Zap } from "lucide-react";
 
 export function PaymentsManagement() {
   const { selectedBuilding } = useSelection();
@@ -39,10 +33,20 @@ export function PaymentsManagement() {
   const [typeFilter, setTypeFilter] = useState<
     "all" | TransactionType
   >("all");
+  const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
+  const [units, setUnits] = useState<UnitResponseFromAPI[]>([]);
+  const [cashPaymentForm, setCashPaymentForm] = useState({
+    unitId: "",
+    amount: "",
+    fundType: "GENERAL" as FundType,
+    note: "",
+  });
+  const [submittingCashPayment, setSubmittingCashPayment] = useState(false);
 
   useEffect(() => {
     if (selectedBuilding) {
       loadData();
+      loadUnits();
     }
   }, [selectedBuilding, typeFilter]);
 
@@ -97,6 +101,17 @@ export function PaymentsManagement() {
       setTransactions(data);
     } catch (err) {
       console.error("Error loading transactions:", err);
+    }
+  };
+
+  const loadUnits = async () => {
+    if (!selectedBuilding) return;
+
+    try {
+      const data = await unitService.getAllByBuilding(selectedBuilding.id);
+      setUnits(data);
+    } catch (err) {
+      console.error("Error loading units:", err);
     }
   };
 
@@ -197,6 +212,49 @@ export function PaymentsManagement() {
     }
   };
 
+  const handleCashPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBuilding) return;
+
+    const unitId = parseInt(cashPaymentForm.unitId);
+    const amount = parseFloat(cashPaymentForm.amount);
+
+    if (!unitId || isNaN(unitId)) {
+      alert("Моля, изберете апартамент");
+      return;
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Моля, въведете валидна сума");
+      return;
+    }
+
+    setSubmittingCashPayment(true);
+
+    try {
+      await paymentService.createCashPayment(unitId, {
+        amount,
+        fundType: cashPaymentForm.fundType,
+        note: cashPaymentForm.note,
+      });
+
+      alert("Плащането е регистрирано успешно!");
+      setShowCashPaymentModal(false);
+      setCashPaymentForm({
+        unitId: "",
+        amount: "",
+        fundType: "GENERAL" as FundType,
+        note: "",
+      });
+      loadTransactions();
+    } catch (err: any) {
+      console.error("Error creating cash payment:", err);
+      alert("Грешка при регистриране на плащането");
+    } finally {
+      setSubmittingCashPayment(false);
+    }
+  };
+
   const filteredTransactions = transactions.filter((tx) => {
     if (filter === "all") return true;
     if (filter === "pending")
@@ -285,6 +343,13 @@ export function PaymentsManagement() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowCashPaymentModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Banknote className="w-5 h-5" />
+            Регистрирай кеш плащане
+          </button>
           <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
             <Download className="w-5 h-5" />
             Експорт
@@ -433,8 +498,8 @@ export function PaymentsManagement() {
         )}
 
         <p className="text-xs text-gray-500 mt-3">
-          Месечните такси се изчисляват автоматично според
-          квадратурата и броя жители на всеки апартамент
+          💡 Месечните такси се изчисляват автоматично според
+          квадратурата на всеки апартамент
         </p>
       </div>
 
@@ -720,6 +785,124 @@ export function PaymentsManagement() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Модал за кеш плащане */}
+      <div
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center ${
+          showCashPaymentModal ? "block" : "hidden"
+        }`}
+      >
+        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+          <h2 className="text-gray-900 text-xl font-bold mb-4">
+            Добавяне на кеш плащане
+          </h2>
+          <form onSubmit={handleCashPaymentSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 text-sm mb-2">
+                  Апартамент
+                </label>
+                <select
+                  value={cashPaymentForm.unitId}
+                  onChange={(e) =>
+                    setCashPaymentForm((prev) => ({
+                      ...prev,
+                      unitId: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Изберете апартамент</option>
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      Апартамент № {unit.unitNumber}{unit.ownerInfo ? ` - ${unit.ownerInfo.firstName} ${unit.ownerInfo.lastName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm mb-2">
+                  Сума (лв)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={cashPaymentForm.amount}
+                  onChange={(e) =>
+                    setCashPaymentForm((prev) => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm mb-2">
+                  Фонд
+                </label>
+                <select
+                  value={cashPaymentForm.fundType}
+                  onChange={(e) =>
+                    setCashPaymentForm((prev) => ({
+                      ...prev,
+                      fundType: e.target.value as FundType,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="GENERAL">Общ</option>
+                  <option value="REPAIR">Ремонти</option>
+                  <option value="MAINTENANCE">Поддръжка</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm mb-2">
+                  Забележка
+                </label>
+                <input
+                  type="text"
+                  value={cashPaymentForm.note}
+                  onChange={(e) =>
+                    setCashPaymentForm((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                type="submit"
+                disabled={submittingCashPayment}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+              >
+                {submittingCashPayment ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Запазване...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Запази
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowCashPaymentModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Отказ
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

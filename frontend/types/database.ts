@@ -21,7 +21,8 @@ export enum PaymentMethod {
   SYSTEM = 'SYSTEM',
   STRIPE = 'STRIPE',
   CASH = 'CASH',
-  BANK = 'BANK'
+  BANK = 'BANK',
+  BANK_TRANSFER = 'BANK_TRANSFER' // Backend използва този вариант
 }
 
 export enum FundType {

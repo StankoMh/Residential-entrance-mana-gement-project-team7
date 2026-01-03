@@ -7,7 +7,6 @@ import { EventsManagement } from './EventsManagement';
 import { VotingManagement } from './VotingManagement';
 import { ArchiveManagement } from './ArchiveManagement';
 import { HomesAndBuildings } from './HomesAndBuildings';
-import { ProfilePage } from './ProfilePage';
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminView, adminViews } from '../types/views';
@@ -35,13 +34,13 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden pt-[73px]">
       <DashboardHeader onLogout={onLogout} isAdmin />
       
       <div className="flex">
         <AdminSidebar currentView={currentView} onViewChange={handleViewChange} />
         
-        <main className="flex-1 p-6 ml-64">
+        <main className="flex-1 p-6 ml-64 overflow-x-hidden">
           {currentView === 'homes' && <HomesAndBuildings />}
           {currentView === 'overview' && <AdminOverview />}
           {currentView === 'apartments' && <ApartmentsManagement />}
@@ -49,7 +48,6 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           {currentView === 'events' && <EventsManagement />}
           {currentView === 'voting' && <VotingManagement />}
           {currentView === 'archive' && <ArchiveManagement />}
-          {currentView === 'profile' && <ProfilePage />}
         </main>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { api } from '../config/api';
+import { axiosInstance } from '../config/api';
 import type { 
   Transaction, 
   ReceiptDetails,
@@ -25,6 +26,39 @@ export const paymentService = {
   // Регистрирай банково плащане
   createBankPayment: async (unitId: number, request: BankPaymentRequest): Promise<void> => {
     await api.post<void>(`/units/${unitId}/payments/bank`, request);
+  },
+
+  // Регистрирай банково плащане с файл (алтернативен метод - multipart/form-data)
+  createBankPaymentWithFile: async (
+    unitId: number, 
+    amount: number, 
+    transactionReference: string, 
+    file: File
+  ): Promise<void> => {
+    const formData = new FormData();
+    formData.append('amount', amount.toString());
+    formData.append('transactionReference', transactionReference);
+    formData.append('file', file);
+
+    await axiosInstance.post<void>(`/units/${unitId}/payments/bank`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // Качи файл за банково плащане и получи URL
+  uploadPaymentProof: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await axiosInstance.post<{ url: string }>('/uploads', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data.url;
   },
 
   // Получи всички транзакции за unit (плащания или такси)

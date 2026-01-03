@@ -1,117 +1,192 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, File, Download, Trash2, Search, Filter, Calendar, FileText, Image as ImageIcon, FileSpreadsheet } from 'lucide-react';
-
-interface Document {
-  id: string;
-  name: string;
-  type: 'pdf' | 'image' | 'excel' | 'other';
-  category: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  size: string;
-  url?: string;
-}
-
-// Mock данни
-const mockDocuments: Document[] = [
-  {
-    id: '1',
-    name: 'Протокол от ОС - Януари 2024.pdf',
-    type: 'pdf',
-    category: 'Протоколи',
-    uploadedBy: 'Иван Петров',
-    uploadedAt: '2024-01-15',
-    size: '2.4 MB',
-  },
-  {
-    id: '2',
-    name: 'Годишен финансов отчет 2023.xlsx',
-    type: 'excel',
-    category: 'Финанси',
-    uploadedBy: 'Мария Георгиева',
-    uploadedAt: '2024-01-10',
-    size: '1.1 MB',
-  },
-  {
-    id: '3',
-    name: 'Снимка щети асансьор.jpg',
-    type: 'image',
-    category: 'Инциденти',
-    uploadedBy: 'Георги Димитров',
-    uploadedAt: '2024-01-05',
-    size: '3.2 MB',
-  },
-];
-
-const categories = ['Всички', 'Протоколи', 'Финанси', 'Инциденти', 'Договори', 'Кореспонденция', 'Други'];
+import { useSelection } from '../contexts/SelectionContext';
+import { documentService, DocumentMetadata, DocumentCategory, DocumentType } from '../services/documentService';
 
 export function ArchiveManagement() {
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments);
+  const { selectedBuilding } = useSelection();
+  const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
+  const [categories, setCategories] = useState<DocumentCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Всички');
+  const [selectedCategory, setSelectedCategory] = useState<DocumentType | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
-  const [uploadCategory, setUploadCategory] = useState('Протоколи');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadType, setUploadType] = useState<DocumentType>('PROTOCOL');
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  const getFileIcon = (type: Document['type']) => {
-    switch (type) {
-      case 'pdf':
-        return <FileText className="w-5 h-5 text-red-500" />;
-      case 'image':
-        return <ImageIcon className="w-5 h-5 text-blue-500" />;
-      case 'excel':
-        return <FileSpreadsheet className="w-5 h-5 text-green-500" />;
-      default:
-        return <File className="w-5 h-5 text-gray-500" />;
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (selectedBuilding) {
+      loadDocuments();
+    }
+  }, [selectedBuilding]);
+
+  const loadCategories = async () => {
+    try {
+      const data = await documentService.getCategories();
+      setCategories(data);
+      if (data.length > 0) {
+        setUploadType(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
     }
   };
 
+  const loadDocuments = async () => {
+    if (!selectedBuilding) return;
+
+    try {
+      setLoading(true);
+      const data = await documentService.getDocumentsByBuilding(selectedBuilding.id);
+      setDocuments(data);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      alert('Грешка при зареждане на документи');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFileIcon = (fileUrl: string) => {
+    const extension = fileUrl.split('.').pop()?.toLowerCase() || '';
+    
+    if (extension === 'pdf') {
+      return <FileText className="w-5 h-5 text-red-500" />;
+    } else if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(extension)) {
+      return <ImageIcon className="w-5 h-5 text-blue-500" />;
+    } else if (['xlsx', 'xls', 'csv'].includes(extension)) {
+      return <FileSpreadsheet className="w-5 h-5 text-green-500" />;
+    } else {
+      return <File className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const getCategoryName = (type: DocumentType): string => {
+    const category = categories.find(cat => cat.id === type);
+    return category?.name || type;
+  };
+
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'Всички' || doc.category === selectedCategory;
+    const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         doc.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === null || doc.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setUploadFiles(e.target.files);
-    }
-  };
-
-  const handleUpload = () => {
-    if (!uploadFiles || uploadFiles.length === 0) return;
-
-    // Тук ще се прави API заявка към backend-а
-    // За сега добавяме mock документ
-    const newDocs: Document[] = Array.from(uploadFiles).map((file, index) => {
-      const extension = file.name.split('.').pop()?.toLowerCase() || '';
-      let type: Document['type'] = 'other';
+      const file = e.target.files[0];
       
-      if (extension === 'pdf') type = 'pdf';
-      else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) type = 'image';
-      else if (['xlsx', 'xls', 'csv'].includes(extension)) type = 'excel';
-
-      return {
-        id: `new-${Date.now()}-${index}`,
-        name: file.name,
-        type,
-        category: uploadCategory,
-        uploadedBy: 'Текущ потребител',
-        uploadedAt: new Date().toISOString().split('T')[0],
-        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-      };
-    });
-
-    setDocuments([...newDocs, ...documents]);
-    setIsUploadModalOpen(false);
-    setUploadFiles(null);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Сигурни ли сте, че искате да изтриете този документ?')) {
-      setDocuments(documents.filter((doc) => doc.id !== id));
+      // Проверка дали файлът е PDF
+      if (file.type !== 'application/pdf') {
+        alert('Моля, изберете само PDF файл');
+        e.target.value = ''; // Изчистваме избора
+        return;
+      }
+      
+      setUploadFile(file);
+      // Автоматично задаваме заглавие от името на файла
+      if (!uploadTitle) {
+        setUploadTitle(file.name);
+      }
     }
   };
+
+  const handleUpload = async () => {
+    if (!uploadFile || !selectedBuilding || !uploadTitle.trim()) {
+      alert('Моля, попълнете всички задължителни полета');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      await documentService.uploadDocument(
+        selectedBuilding.id,
+        uploadFile,
+        uploadType,
+        uploadTitle,
+        uploadDescription,
+        true // isVisibleToResidents
+      );
+
+      alert('Документът е качен успешно!');
+      setIsUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadTitle('');
+      setUploadDescription('');
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      alert(error.message || 'Грешка при качване на документ');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (doc: DocumentMetadata) => {
+    if (!confirm(`Сигурни ли сте, че искате да изтриете \"${doc.title}\"?`) || !selectedBuilding) {
+      return;
+    }
+
+    try {
+      await documentService.deleteDocument(selectedBuilding.id, doc.id);
+      alert('Документът е изтрит успешно!');
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      alert(error.message || 'Грешка при изтриване на документ');
+    }
+  };
+
+  const handleDownload = async (doc: DocumentMetadata) => {
+    try {
+      const blob = await documentService.downloadDocument(doc.fileUrl);
+      // Използваме заглавието на документа като име на файла
+      let fileName = doc.title;
+      // Добавяме .pdf разширение ако го няма
+      if (!fileName.toLowerCase().endsWith('.pdf')) {
+        fileName += '.pdf';
+      }
+      documentService.downloadAndSaveFile(blob, fileName);
+    } catch (error: any) {
+      console.error('Error downloading document:', error);
+      alert(error.message || 'Грешка при изтегляне на документ');
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  if (!selectedBuilding) {
+    return (
+      <div className="p-6">
+        <p className="text-gray-600 text-center">
+          Моля, изберете вход за преглед на архива
+        </p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <p className="text-gray-600 text-center">Зареждане...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -145,13 +220,14 @@ export function ArchiveManagement() {
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              value={selectedCategory ?? ''}
+              onChange={(e) => setSelectedCategory(e.target.value ? e.target.value as DocumentType : null)}
               className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
+              <option value="">Всички категории</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
                 </option>
               ))}
             </select>
@@ -184,34 +260,34 @@ export function ArchiveManagement() {
                   <tr key={doc.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        {getFileIcon(doc.type)}
-                        <span className="text-gray-900">{doc.name}</span>
+                        {getFileIcon(doc.fileUrl)}
+                        <span className="text-gray-900">{doc.title}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                        {doc.category}
+                        {getCategoryName(doc.type)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{doc.uploadedBy}</td>
+                    <td className="px-6 py-4 text-gray-600">{doc.uploaderName}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        {new Date(doc.uploadedAt).toLocaleDateString('bg-BG')}
+                        {new Date(doc.createdAt).toLocaleDateString('bg-BG')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{doc.size}</td>
+                    <td className="px-6 py-4 text-gray-600">-</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => alert('Изтегляне на документ (API заявка)')}
+                          onClick={() => handleDownload(doc)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Изтегли"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(doc.id)}
+                          onClick={() => handleDelete(doc)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Изтрий"
                         >
@@ -229,7 +305,7 @@ export function ArchiveManagement() {
 
       {/* Upload Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-gray-900 mb-4">Качване на документ</h2>
 
@@ -238,13 +314,13 @@ export function ArchiveManagement() {
               <div>
                 <label className="block text-gray-700 mb-2">Категория</label>
                 <select
-                  value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
+                  value={uploadType}
+                  onChange={(e) => setUploadType(e.target.value as DocumentType)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {categories.filter((cat) => cat !== 'Всички').map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>
@@ -256,35 +332,53 @@ export function ArchiveManagement() {
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
                   <input
                     type="file"
-                    multiple
                     onChange={handleFileChange}
                     className="hidden"
                     id="file-upload"
-                    accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.doc,.docx"
+                    accept=".pdf,application/pdf"
                   />
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-600 mb-1">
-                      Кликнете за избор на файлове
+                      Кликнете за избор на PDF файл
                     </p>
                     <p className="text-gray-400 text-sm">
-                      PDF, снимки, Excel, Word
+                      Само PDF документи
                     </p>
                   </label>
                 </div>
-                {uploadFiles && uploadFiles.length > 0 && (
+                {uploadFile && (
                   <div className="mt-3 space-y-2">
-                    {Array.from(uploadFiles).map((file, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
-                        <File className="w-4 h-4" />
-                        <span>{file.name}</span>
-                        <span className="text-gray-400">
-                          ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-                        </span>
-                      </div>
-                    ))}
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <File className="w-4 h-4" />
+                      <span>{uploadFile.name}</span>
+                      <span className="text-gray-400">
+                        ({formatFileSize(uploadFile.size)})
+                      </span>
+                    </div>
                   </div>
                 )}
+              </div>
+
+              {/* Заглавие */}
+              <div>
+                <label className="block text-gray-700 mb-2">Заглавие</label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Описание */}
+              <div>
+                <label className="block text-gray-700 mb-2">Описание</label>
+                <textarea
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
 
@@ -292,18 +386,19 @@ export function ArchiveManagement() {
               <button
                 onClick={() => {
                   setIsUploadModalOpen(false);
-                  setUploadFiles(null);
+                  setUploadFile(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={uploading}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Откажи
               </button>
               <button
                 onClick={handleUpload}
-                disabled={!uploadFiles || uploadFiles.length === 0}
+                disabled={!uploadFile || uploading}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Качи
+                {uploading ? 'Качване...' : 'Качи'}
               </button>
             </div>
           </div>

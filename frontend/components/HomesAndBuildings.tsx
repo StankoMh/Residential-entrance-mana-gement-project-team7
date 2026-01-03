@@ -226,6 +226,7 @@ function CreateBuildingModal({
   const [error, setError] = useState('');
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [isAddressFromGoogle, setIsAddressFromGoogle] = useState(false);
+  const [addressComponents, setAddressComponents] = useState<google.maps.GeocoderAddressComponent[]>([]);
 
   const onAutocompleteLoad = (autocomplete: google.maps.places.Autocomplete) => {
     autocompleteRef.current = autocomplete;
@@ -241,37 +242,17 @@ function CreateBuildingModal({
       return;
     }
 
-    const components = place.address_components;
-
-    const hasStreet = components.some(c =>
-      c.types.includes('route')
-    );
-
-    const hasStreetNumber = components.some(c =>
-      c.types.includes('street_number')
-    );
-
-    const hasNeighborhood = components.some(c =>
-      c.types.includes('neighborhood') ||
-      c.types.includes('sublocality')
-    );
-
-    // ❌ задължително улица + номер
-    if (!hasStreet || !hasStreetNumber) {
-      setError('Моля, въведете точен адрес с улица и номер (блок).');
-      setIsAddressFromGoogle(false);
-      return;
-    }
-
+    // Изчистваме грешката когато избират адрес
     setError('');
-
+    
+    // Задаваме адреса от Google
     setFormData(prev => ({
       ...prev,
       address: place.formatted_address!,
       googlePlaceId: place.place_id!,
     }));
-
     setIsAddressFromGoogle(true);
+    setAddressComponents(place.address_components);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -280,9 +261,23 @@ function CreateBuildingModal({
     setLoading(true);
 
     try {
-
       if (!isAddressFromGoogle) {
         setError('Моля, изберете адрес от списъка на Google.');
+        setLoading(false);
+        return;
+      }
+
+      // Валидация за улица и номер
+      const hasStreet = addressComponents.some(c =>
+        c.types.includes('route')
+      );
+
+      const hasStreetNumber = addressComponents.some(c =>
+        c.types.includes('street_number')
+      );
+
+      if (!hasStreet || !hasStreetNumber) {
+        setError('Моля, изберете адрес с улица и номер. Общи адреси като квартали или региони не са разрешени.');
         setLoading(false);
         return;
       }
@@ -297,7 +292,7 @@ function CreateBuildingModal({
   };
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
         <h2 className="text-gray-900 mb-4">Създаване на нов вход</h2>
 

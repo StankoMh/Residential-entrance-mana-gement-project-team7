@@ -1,10 +1,10 @@
-import { Receipt, CheckCircle, AlertCircle, Clock, TrendingUp, DollarSign, Download } from 'lucide-react';
+import { Receipt, CheckCircle, AlertCircle, Clock, Filter, Download, ChevronDown, DollarSign } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentService } from '../services/paymentService';
 import { useSelection } from '../contexts/SelectionContext';
 import type { Transaction } from '../types/database';
-import { FundType, TransactionStatus } from '../types/database';
+import { TransactionStatus, TransactionType, FundType, PaymentMethod } from '../types/database';
 
 export function PaymentsPage() {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ export function PaymentsPage() {
         paymentService.getUnitTransactions(selectedUnit.unitId),
         paymentService.getUnitBalance(selectedUnit.unitId)
       ]);
+      console.log('Loaded transactions:', txData);
       setTransactions(txData);
       setBalance(balanceData);
     } catch (err) {
@@ -46,11 +47,19 @@ export function PaymentsPage() {
   };
 
   const handlePayClick = () => {
+    // Navigate to payment checkout page
     navigate('/payment/checkout');
   };
 
-  const handleDownloadReceipt = async (transactionId: number) => {
+  const handleDownloadReceipt = async (transactionId: number, documentUrl?: string) => {
     try {
+      // Ако има директно documentUrl, използваме го
+      if (documentUrl) {
+        window.open(documentUrl, '_blank');
+        return;
+      }
+      
+      // Иначе опитваме да го вземем от receipt details (за стари версии)
       const details = await paymentService.getReceiptDetails(transactionId);
       if (details.documentUrl) {
         window.open(details.documentUrl, '_blank');
@@ -68,8 +77,8 @@ export function PaymentsPage() {
   });
 
   // Статистики
-  const payments = transactions.filter(tx => tx.type === 'PAYMENT');
-  const fees = transactions.filter(tx => tx.type === 'FEE');
+  const payments = transactions.filter(tx => tx.type === TransactionType.PAYMENT);
+  const fees = transactions.filter(tx => tx.type === TransactionType.FEE);
   
   const totalPaid = payments
     .filter(p => p.transactionStatus === TransactionStatus.CONFIRMED)
@@ -85,11 +94,11 @@ export function PaymentsPage() {
   const repairTransactions = transactions.filter(t => t.fundType === FundType.REPAIR);
   
   const maintenancePaid = maintenanceTransactions
-    .filter(t => t.type === 'PAYMENT' && t.transactionStatus === TransactionStatus.CONFIRMED)
+    .filter(t => t.type === TransactionType.PAYMENT && t.transactionStatus === TransactionStatus.CONFIRMED)
     .reduce((sum, t) => sum + t.amount, 0);
     
   const repairPaid = repairTransactions
-    .filter(t => t.type === 'PAYMENT' && t.transactionStatus === TransactionStatus.CONFIRMED)
+    .filter(t => t.type === TransactionType.PAYMENT && t.transactionStatus === TransactionStatus.CONFIRMED)
     .reduce((sum, t) => sum + t.amount, 0);
 
   if (!selectedUnit) {
@@ -115,7 +124,7 @@ export function PaymentsPage() {
         <p className="text-gray-600">Преглед на всички такси и плащания</p>
       </div>
 
-      {/* Статистик�� */}
+      {/* Статистик */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
@@ -152,6 +161,39 @@ export function PaymentsPage() {
           <div className="text-gray-900 mb-1">{pendingPayments}</div>
           <div className="text-gray-600 text-sm mb-1">Чакащи одобрение</div>
           <div className="text-gray-500 text-xs">Плащания</div>
+        </div>
+      </div>
+
+      {/* Статистики по фондове */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <DollarSign className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-gray-900">Фонд Поддръжка</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600 text-sm">Платени:</span>
+              <span className="text-green-600">{maintenancePaid.toFixed(2)} лв</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <DollarSign className="w-5 h-5 text-purple-600" />
+            </div>
+            <h3 className="text-gray-900">Фонд Ремонти</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600 text-sm">Платени:</span>
+              <span className="text-green-600">{repairPaid.toFixed(2)} лв</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -216,10 +258,26 @@ export function PaymentsPage() {
             </div>
           ) : (
             filteredTransactions.map((tx) => {
-              const isPayment = tx.type === 'PAYMENT';
+              const isPayment = tx.type === TransactionType.PAYMENT;
               const isConfirmed = tx.transactionStatus === TransactionStatus.CONFIRMED;
               const isPending = tx.transactionStatus === TransactionStatus.PENDING;
               const isRejected = tx.transactionStatus === TransactionStatus.REJECTED;
+              
+              // Backend връща 'BANK_TRANSFER', не 'BANK'
+              const isBankPayment = tx.paymentMethod === PaymentMethod.BANK_TRANSFER || tx.paymentMethod === PaymentMethod.BANK;
+              const showDocument = (tx.documentUrl && isConfirmed) || (tx.externalDocumentUrl && isPending && isBankPayment);
+              const documentUrl = tx.externalDocumentUrl || tx.documentUrl;
+
+              console.log(`PaymentsPage - Transaction ${tx.id}:`, {
+                type: tx.type,
+                status: tx.transactionStatus,
+                paymentMethod: tx.paymentMethod,
+                documentUrl: tx.documentUrl,
+                externalDocumentUrl: tx.externalDocumentUrl,
+                isBankPayment,
+                showDocument,
+                finalUrl: documentUrl
+              });
 
               return (
                 <div key={tx.id} className="p-5 hover:bg-gray-50 transition-colors">
@@ -227,7 +285,7 @@ export function PaymentsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-gray-900">
-                          {isPayment ? 'Плащане' : 'Такса - ' + getFundName(tx.fundType)}
+                          {isPayment ? 'Плащане' : 'Такса'} - {getFundName(tx.fundType)}
                         </h3>
                         {isConfirmed && (
                           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -250,15 +308,18 @@ export function PaymentsPage() {
                             year: 'numeric'
                           })}
                         </span>
-                        <span className={`${
-                          isConfirmed ? 'text-green-600' :
-                          isPending ? 'text-orange-600' :
-                          'text-red-600'
-                        }`}>
-                          {isConfirmed ? 'Потвърдено' :
-                           isPending ? 'Чака одобрение' :
-                           'Отхвърлено'}
-                        </span>
+                        {/* Показваме статус само за плащания, не за такси */}
+                        {isPayment && (
+                          <span className={`${
+                            isConfirmed ? 'text-green-600' :
+                            isPending ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {isConfirmed ? 'Потвърдено' :
+                             isPending ? 'Чака одобрение' :
+                             'Отхвърлено'}
+                          </span>
+                        )}
                         {tx.paymentMethod && tx.paymentMethod !== 'SYSTEM' && (
                           <span className="text-gray-500">
                             {tx.paymentMethod === 'STRIPE' ? 'Карта' :
@@ -274,13 +335,14 @@ export function PaymentsPage() {
                       }`}>
                         {isPayment ? '+' : '-'}{Math.abs(tx.amount).toFixed(2)} лв
                       </div>
-                      {tx.documentUrl && isConfirmed && (
+                      {/* Показваме документ за банкови плащания (pending с externalDocumentUrl) или разписка за потвърдени (documentUrl) */}
+                      {showDocument && (
                         <button
-                          onClick={() => handleDownloadReceipt(tx.id)}
+                          onClick={() => handleDownloadReceipt(tx.id, documentUrl || undefined)}
                           className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-700"
                         >
                           <Download className="w-4 h-4" />
-                          Разписка
+                          {isPending && isBankPayment ? 'Платежно' : 'Разписка'}
                         </button>
                       )}
                     </div>
