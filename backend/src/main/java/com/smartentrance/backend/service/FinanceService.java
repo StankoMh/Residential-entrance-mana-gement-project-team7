@@ -100,7 +100,8 @@ public class FinanceService {
     public void rejectTransaction(Long transactionId) {
         Transaction t = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-        transactionRepository.delete(t);
+        t.setStatus(TransactionStatus.REJECTED);
+        transactionRepository.save(t);
     }
 
     private void createPaymentTransaction(Long unitId, BigDecimal amount, PaymentMethod method,
