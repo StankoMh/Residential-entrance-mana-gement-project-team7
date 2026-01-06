@@ -22,7 +22,9 @@ public class TransactionMapper {
                 transaction.getStatus(),
                 resolveDocumentUrl(transaction.getProofUrl()),
                 resolveDocumentUrl(transaction.getExternalProofUrl()),
-                transaction.getCreatedAt()
+                transaction.getCreatedAt(),
+                transaction.getUnit().getId(),
+                transaction.getUnit().getUnitNumber()
         );
     }
 

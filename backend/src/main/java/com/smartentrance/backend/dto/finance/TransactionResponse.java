@@ -18,5 +18,7 @@ public record TransactionResponse(
         TransactionStatus transactionStatus,
         String documentUrl,
         String externalDocumentUrl,
-        Instant createdAt
+        Instant createdAt,
+        Long unitId,
+        Integer unitNumber
 ) {}
