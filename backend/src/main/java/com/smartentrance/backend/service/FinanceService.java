@@ -177,50 +177,20 @@ public class FinanceService {
         for (Unit unit : units) {
             try {
                 if (totalArea.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal myShareRatio = unit.getArea().divide(totalArea, 4, RoundingMode.HALF_UP);
-                    BigDecimal myRepairFee = building.getRepairBudget().multiply(myShareRatio);
+                    BigDecimal myRepairFee = building.getRepairBudget()
+                            .multiply(unit.getArea())
+                            .divide(totalArea, 2, RoundingMode.HALF_UP);
                     chargeFeeInternal(unit, myRepairFee, FundType.REPAIR, "Monthly Repair " + month);
                 }
                 if (totalResidents > 0 && unit.getResidentsCount() > 0) {
-                    BigDecimal pricePerPerson = building.getMaintenanceBudget().divide(new BigDecimal(totalResidents), 2, RoundingMode.HALF_UP);
-                    BigDecimal myMaintenanceFee = pricePerPerson.multiply(new BigDecimal(unit.getResidentsCount()));
+                    BigDecimal myMaintenanceFee = building.getMaintenanceBudget()
+                            .multiply(new BigDecimal(unit.getResidentsCount()))
+                            .divide(new BigDecimal(totalResidents), 2, RoundingMode.HALF_UP);
                     chargeFeeInternal(unit, myMaintenanceFee, FundType.MAINTENANCE, "Monthly Maint " + month);
                 }
             } catch (Exception e) {
                 System.out.println("Error fee unit " + unit.getId() + ": " + e.getMessage());
             }
-        }
-    }
-
-    @Transactional
-    @PreAuthorize("@buildingSecurity.isManager(#buildingId, principal.user)")
-    public void createExtraordinaryExpense(Integer buildingId, BigDecimal totalAmount,
-                                           String description, FundType fundType,
-                                           SplitMethod splitMethod) {
-        List<Unit> units = unitService.findAllByBuildingId(buildingId);
-        BigDecimal totalDivisor;
-
-        if (splitMethod == SplitMethod.BY_AREA) {
-            totalDivisor = units.stream().map(Unit::getArea).reduce(BigDecimal.ZERO, BigDecimal::add);
-        } else if (splitMethod == SplitMethod.BY_OCCUPANT) {
-            totalDivisor = BigDecimal.valueOf(units.stream().mapToInt(u -> u.getResidentsCount() == null ? 0 : u.getResidentsCount()).sum());
-        } else {
-            totalDivisor = BigDecimal.valueOf(units.size());
-        }
-
-        if (totalDivisor.compareTo(BigDecimal.ZERO) == 0) return;
-
-        for (Unit unit : units) {
-            BigDecimal share;
-            if (splitMethod == SplitMethod.BY_AREA) {
-                share = unit.getArea().divide(totalDivisor, 4, RoundingMode.HALF_UP).multiply(totalAmount);
-            } else if (splitMethod == SplitMethod.BY_OCCUPANT) {
-                share = BigDecimal.valueOf(unit.getResidentsCount() == null ? 0 : unit.getResidentsCount())
-                        .divide(totalDivisor, 4, RoundingMode.HALF_UP).multiply(totalAmount);
-            } else {
-                share = totalAmount.divide(totalDivisor, 2, RoundingMode.HALF_UP);
-            }
-            chargeFeeInternal(unit, share, fundType, "EXTRA: " + description);
         }
     }
 
