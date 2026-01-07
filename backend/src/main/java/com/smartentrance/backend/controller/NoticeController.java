@@ -6,6 +6,7 @@ import com.smartentrance.backend.dto.notice.NoticeResponse;
 import com.smartentrance.backend.dto.notice.NoticeUpdateRequest;
 import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.NoticeService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
+    @Operation(summary = "Create Notice", description = "Publishes a new announcement or General Assembly notice for the building residents.")
     @PostMapping("/buildings/{buildingId}/notices")
     public ResponseEntity<NoticeResponse> createNotice(
             @PathVariable Integer buildingId,
@@ -32,6 +34,7 @@ public class NoticeController {
         return ResponseEntity.ok(noticeResponse);
     }
 
+    @Operation(summary = "List Notices", description = "Retrieves a list of active or past notices for the building.")
     @GetMapping("/buildings/{buildingId}/notices")
     public ResponseEntity<List<NoticeResponse>> getNotices(
             @PathVariable Integer buildingId,
@@ -40,6 +43,7 @@ public class NoticeController {
         return ResponseEntity.ok(noticeService.getNotices(buildingId, type.orElse(FilterType.ALL)));
     }
 
+    @Operation(summary = "Delete Notice", description = "Removes an announcement from the building board.")
     @DeleteMapping("/notices/{noticeId}")
     public ResponseEntity<Void> deleteNotice(@PathVariable Integer noticeId,
                                              @AuthenticationPrincipal UserPrincipal principal) {
@@ -48,6 +52,7 @@ public class NoticeController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Update Notice", description = "Modifies the details (title, description, time) of an existing notice.")
     @PutMapping("/notices/{noticeId}")
     public ResponseEntity<NoticeResponse> updateEvent(
             @PathVariable Integer noticeId,

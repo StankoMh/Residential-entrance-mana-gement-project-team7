@@ -25,6 +25,7 @@ public class FileController {
 
     private final FileStorageService fileStorageService;
 
+    @Operation(summary = "Upload File", description = "Uploads a file (PDF, Image) to server storage and returns a reference URL.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -46,6 +47,7 @@ public class FileController {
         ));
     }
 
+    @Operation(summary = "Download File", description = "Streams the file content securely if the user has access.")
     @GetMapping("/files/{fileName:.+}")
     @Hidden
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) throws IOException {
