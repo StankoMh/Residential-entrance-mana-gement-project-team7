@@ -30,7 +30,7 @@ public class RevocationLoader implements CommandLineRunner {
         List<RevocationEntry> entries = revocationRepository.findAll();
 
         if (!entries.isEmpty()) {
-            Map<Integer, Long> loadedData = new HashMap<>();
+            Map<Long, Long> loadedData = new HashMap<>();
 
             for (RevocationEntry entry : entries) {
                 loadedData.put(entry.getUserId(), entry.getRevokedAt());

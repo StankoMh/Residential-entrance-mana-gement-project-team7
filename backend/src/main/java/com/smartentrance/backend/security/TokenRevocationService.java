@@ -13,13 +13,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class TokenRevocationService {
 
-    private final Map<Integer, Long> revocationMap = new ConcurrentHashMap<>();
+    private final Map<Long, Long> revocationMap = new ConcurrentHashMap<>();
     private final RevocationRepository revocationRepository;
 
     @Value("${application.security.jwt.remember-me.expiration}")
     private long rememberMeExpiration;
 
-    public void revokeUser(Integer userId) {
+    public void revokeUser(Long userId) {
         long now = System.currentTimeMillis();
 
         revocationMap.put(userId, now);
@@ -31,13 +31,13 @@ public class TokenRevocationService {
         revocationRepository.deleteOlderThan(threshold);
     }
 
-    public boolean isTokenRevoked(Integer userId, long tokenIssuedAt) {
+    public boolean isTokenRevoked(Long userId, long tokenIssuedAt) {
         Long lastRevocation = revocationMap.get(userId);
         if (lastRevocation == null) return false;
         return (tokenIssuedAt * 1000) < lastRevocation;
     }
 
-    public void loadRevocations(Map<Integer, Long> data) {
+    public void loadRevocations(Map<Long, Long> data) {
         revocationMap.putAll(data);
     }
 }

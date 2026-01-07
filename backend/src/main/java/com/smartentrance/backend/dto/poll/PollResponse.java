@@ -7,7 +7,7 @@ import java.util.List;
 
 public record PollResponse(
         Integer id,
-        Integer createdByUserId,
+        Long createdByUserId,
         String title,
         String description,
         Instant startAt,

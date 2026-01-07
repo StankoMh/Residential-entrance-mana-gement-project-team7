@@ -15,8 +15,8 @@ public interface UserVoteRepository extends JpaRepository<UserVote, Integer> {
 
     boolean existsByPollId(Integer pollId);
 
-    Optional<UserVote> findByPollIdAndUserId(Integer pollId, Integer userId);
+    Optional<UserVote> findByPollIdAndUserId(Integer pollId, Long userId);
 
     @Query("SELECT v FROM UserVote v WHERE v.user.id = :userId AND v.poll.building.id = :buildingId")
-    List<UserVote> findAllByUserIdAndBuildingId(@Param("userId") Integer userId, @Param("buildingId") Integer buildingId);
+    List<UserVote> findAllByUserIdAndBuildingId(@Param("userId") Long userId, @Param("buildingId") Integer buildingId);
 }

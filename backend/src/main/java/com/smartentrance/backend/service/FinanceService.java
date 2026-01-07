@@ -228,7 +228,15 @@ public class FinanceService {
     }
 
     @PreAuthorize("@buildingSecurity.canAccessUnitFinance(#unitId, principal.user)")
-    public BigDecimal getBalance(Long unitId) { return transactionRepository.calculateConfirmedBalance(unitId); }
+    public BigDecimal getBalance(Long unitId) {
+        Unit unit = unitService.findById(unitId).orElseThrow();
+
+        if (unit.getResponsibleUser() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return transactionRepository.calculateUserBalance(unitId, unit.getResponsibleUser().getId());
+    }
 
     @Transactional(readOnly = true)
     @PreAuthorize("@buildingSecurity.canAccessUnitFinance(#unitId, principal.user)")
@@ -243,9 +251,12 @@ public class FinanceService {
 
     @PreAuthorize("@buildingSecurity.canAccessUnitFinance(#unitId, principal.user)")
     public List<TransactionResponse> getTransactionHistory(Long unitId, TransactionType type) {
+        Unit unit = unitService.findById(unitId).orElseThrow();
+
         List<Transaction> transactions = (type != null)
-                ? transactionRepository.findAllByUnitIdAndTypeOrderByCreatedAtDesc(unitId, type)
-                : transactionRepository.findAllByUnitIdOrderByCreatedAtDesc(unitId);
+                ? transactionRepository.findAllByUnitIdAndTypeAndResponsibleUserIdOrderByCreatedAtDesc(unitId, type, unit.getResponsibleUser().getId())
+                : transactionRepository.findAllByUnitIdAndResponsibleUserIdOrderByCreatedAtDesc(unitId, unit.getResponsibleUser().getId());
+
         return transactions.stream().map(transactionMapper::toResponse).toList();
     }
 
@@ -253,7 +264,6 @@ public class FinanceService {
     public List<BuildingExpenseResponse> getBuildingExpenses(Integer buildingId) {
         return expenseRepository.findAllByBuildingIdOrderByExpenseDateDesc(buildingId).stream().map(expenseMapper::toResponse).toList();
     }
-
 
     private Transaction createBaseTransaction(Long unitId, BigDecimal amount, TransactionType type, PaymentMethod method,
                                               FundType fund, String desc, String refId, String externalProof, TransactionStatus status) {
@@ -269,6 +279,7 @@ public class FinanceService {
         t.setExternalProofUrl(externalProof);
         t.setStatus(status);
         t.setCreatedAt(Instant.now());
+        t.setResponsibleUser(unit.getResponsibleUser());
         return transactionRepository.save(t);
     }
 
@@ -303,10 +314,17 @@ public class FinanceService {
     }
 
     private BigDecimal getFundDebt(Long unitId, FundType fundType) {
-        BigDecimal totalFees = transactionRepository.sumFeesByUnitAndFund(unitId, fundType);
+        Unit unit = unitService.findById(unitId).orElseThrow();
+        if (unit.getResponsibleUser() == null) return BigDecimal.ZERO;
+
+        Long userId = unit.getResponsibleUser().getId();
+
+        BigDecimal totalFees = transactionRepository.sumFeesByUserAndFund(unitId, userId, fundType);
         if (totalFees == null) totalFees = BigDecimal.ZERO;
-        BigDecimal totalPaid = transactionRepository.sumSplitsByUnitAndFund(unitId, fundType);
+
+        BigDecimal totalPaid = transactionRepository.sumSplitsByUserAndFund(unitId, userId, fundType);
         if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+
         BigDecimal netBalance = totalFees.add(totalPaid);
         return netBalance.compareTo(BigDecimal.ZERO) < 0 ? netBalance.abs() : BigDecimal.ZERO;
     }
@@ -337,7 +355,10 @@ public class FinanceService {
     @Transactional
     @PreAuthorize("@buildingSecurity.canManageUnit(#unitId, principal.user)")
     public void clearUnitBalance(Long unitId) {
-        BigDecimal currentBalance = transactionRepository.calculateConfirmedBalance(unitId);
+        Unit unit = unitService.findById(unitId).orElseThrow();
+        if (unit.getResponsibleUser() == null) return;
+
+        BigDecimal currentBalance = transactionRepository.calculateUserBalance(unitId, unit.getResponsibleUser().getId());
 
         if (currentBalance == null || currentBalance.compareTo(BigDecimal.ZERO) == 0) {
             return;
@@ -370,6 +391,4 @@ public class FinanceService {
             );
         }
     }
-
-    public enum SplitMethod { BY_AREA, BY_OCCUPANT, EQUAL_PER_UNIT }
 }
