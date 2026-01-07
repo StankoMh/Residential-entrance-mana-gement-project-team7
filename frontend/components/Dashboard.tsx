@@ -4,7 +4,7 @@ import { Overview } from './Overview';
 import { PaymentsPage } from './PaymentsPage';
 import { EventsPage } from './EventsPage';
 import { VotingPage } from './VotingPage';
-import { ArchiveManagement } from './ArchiveManagement';
+import { Archives } from './Archives';
 import { ProfilePage } from './ProfilePage';
 import { HomesAndBuildings } from './HomesAndBuildings';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -51,7 +51,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           
           {currentView === 'voting' && <VotingPage />}
 
-          {currentView === 'archive' && <ArchiveManagement />}
+          {currentView === 'archive' && <Archives />}
 
           {currentView === 'profile' && <ProfilePage />}
         </main>

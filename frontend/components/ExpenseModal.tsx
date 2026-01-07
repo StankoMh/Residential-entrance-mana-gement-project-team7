@@ -2,17 +2,13 @@ import { useState } from "react";
 import { X, Upload, FileText, Trash2, Loader2 } from "lucide-react";
 import { uploadService } from "../services/uploadService";
 import { toast } from "sonner";
+import { CreateExpenseRequest } from "../services/buildingService";
+import { PaymentMethod } from "../types/database";
 
 interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    amount: number;
-    description: string;
-    fundType: "REPAIR" | "GENERAL";
-    documentUrl: string;
-    paymentMethod: "SYSTEM" | "CASH" | "BANK";
-  }) => Promise<void>;
+  onSubmit: (data: CreateExpenseRequest) => Promise<void>;
 }
 
 export function ExpenseModal({
@@ -24,7 +20,7 @@ export function ExpenseModal({
     amount: "",
     description: "",
     fundType: "GENERAL" as "REPAIR" | "GENERAL",
-    paymentMethod: "SYSTEM" as "SYSTEM" | "CASH" | "BANK",
+    paymentMethod: PaymentMethod.BANK_TRANSFER,
   });
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -86,7 +82,7 @@ export function ExpenseModal({
         amount: "",
         description: "",
         fundType: "GENERAL" as "REPAIR" | "GENERAL",
-        paymentMethod: "SYSTEM" as "SYSTEM" | "CASH" | "BANK",
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
       });
       setDocumentUrl("");
       setUploadedFileName("");
@@ -101,7 +97,7 @@ export function ExpenseModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
           <h2 className="text-gray-900 text-xl">Регистрирай разход</h2>
@@ -172,14 +168,13 @@ export function ExpenseModal({
                 onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    paymentMethod: e.target.value as "SYSTEM" | "CASH" | "BANK",
+                    paymentMethod: e.target.value as PaymentMethod,
                   }))
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="SYSTEM">Система</option>
-                <option value="CASH">Кеш</option>
-                <option value="BANK">Банка</option>
+                <option value={PaymentMethod.BANK_TRANSFER}>Банков превод</option>
+                <option value={PaymentMethod.CASH}>Кеш</option>
               </select>
             </div>
 

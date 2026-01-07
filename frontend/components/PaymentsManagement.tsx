@@ -7,7 +7,6 @@ import {
   Banknote,
   Receipt,
   FileText,
-  Download,
   DollarSign,
   ExternalLink,
   TrendingUp,
@@ -24,6 +23,7 @@ import {
   BuildingExpense,
   BudgetData,
   FinancialSummary,
+  CreateExpenseRequest,
 } from "../services/buildingService";
 import { UnitResponseFromAPI } from "../services/unitService";
 import { buildingService } from "../services/buildingService";
@@ -153,23 +153,11 @@ export function PaymentsManagement() {
     }
   };
 
-  const handleExpenseSubmit = async (data: {
-    amount: number;
-    description: string;
-    fundType: "REPAIR" | "GENERAL";
-    documentUrl: string;
-    paymentMethod: "SYSTEM" | "CASH" | "BANK";
-  }) => {
+  const handleExpenseSubmit = async (data: CreateExpenseRequest) => {
     if (!selectedBuilding) return;
 
     try {
-      await buildingService.createExpense(selectedBuilding.id, {
-        amount: data.amount,
-        description: data.description,
-        fundType: data.fundType,
-        documentUrl: data.documentUrl || null,
-        paymentMethod: data.paymentMethod,
-      });
+      await buildingService.createExpense(selectedBuilding.id, data);
       toast.success("Разходът е регистриран успешно");
       loadAllData();
     } catch (err) {
@@ -291,10 +279,6 @@ export function PaymentsManagement() {
   const rejectedPayments = transactionItems.filter(
     (i) => i.transactionStatus === TransactionStatus.REJECTED
   );
-
-  const totalConfirmed = confirmedPayments.reduce((sum, i) => sum + i.amount, 0);
-  const totalPending = pendingPayments.reduce((sum, i) => sum + i.amount, 0);
-  const totalRejected = rejectedPayments.reduce((sum, i) => sum + i.amount, 0);
 
   // Статистики по фондове от API (Real-time данни от backend)
   const maintenanceIncome = financialSummary?.maintenanceFund.income ?? 0;

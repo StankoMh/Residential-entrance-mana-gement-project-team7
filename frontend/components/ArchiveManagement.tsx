@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Upload, File, Download, Trash2, Search, Filter, Calendar, FileText, Image as ImageIcon, FileSpreadsheet } from 'lucide-react';
+import { Upload, File, Download, Trash2, Search, Filter, Calendar, FileText, Image as ImageIcon, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
 import { useSelection } from '../contexts/SelectionContext';
 import { documentService, DocumentMetadata, DocumentCategory, DocumentType } from '../services/documentService';
+import { toast } from 'sonner';
 
 export function ArchiveManagement() {
   const { selectedBuilding } = useSelection();
@@ -14,6 +15,7 @@ export function ArchiveManagement() {
   const [uploadType, setUploadType] = useState<DocumentType>('PROTOCOL');
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
+  const [isVisibleToResidents, setIsVisibleToResidents] = useState(true);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
@@ -48,7 +50,7 @@ export function ArchiveManagement() {
       setDocuments(data);
     } catch (error) {
       console.error('Error loading documents:', error);
-      alert('Грешка при зареждане на документи');
+      toast.error('Грешка при зареждане на документи');
     } finally {
       setLoading(false);
     }
@@ -114,10 +116,10 @@ export function ArchiveManagement() {
         uploadType,
         uploadTitle,
         uploadDescription,
-        true // isVisibleToResidents
+        isVisibleToResidents // isVisibleToResidents
       );
 
-      alert('Документът е качен успешно!');
+      toast.success('Документът е качен успешно!');
       setIsUploadModalOpen(false);
       setUploadFile(null);
       setUploadTitle('');
@@ -125,7 +127,7 @@ export function ArchiveManagement() {
       loadDocuments();
     } catch (error: any) {
       console.error('Error uploading document:', error);
-      alert(error.message || 'Грешка при качване на документ');
+      toast.error(error.message || 'Грешка при качване на документ');
     } finally {
       setUploading(false);
     }
@@ -138,11 +140,11 @@ export function ArchiveManagement() {
 
     try {
       await documentService.deleteDocument(selectedBuilding.id, doc.id);
-      alert('Документът е изтрит успешно!');
+      toast.success('Документът е изтрит успешно!');
       loadDocuments();
     } catch (error: any) {
       console.error('Error deleting document:', error);
-      alert(error.message || 'Грешка при изтриване на документ');
+      toast.error(error.message || 'Грешка при изтриване на документ');
     }
   };
 
@@ -158,8 +160,13 @@ export function ArchiveManagement() {
       documentService.downloadAndSaveFile(blob, fileName);
     } catch (error: any) {
       console.error('Error downloading document:', error);
-      alert(error.message || 'Грешка при изтегляне на документ');
+      toast.error(error.message || 'Грешка при изтегляне на документ');
     }
+  };
+
+  const handleOpenInBrowser = (doc: DocumentMetadata) => {
+    // Отваряме документа в нов таб
+    window.open(doc.fileUrl, '_blank');
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -251,8 +258,7 @@ export function ArchiveManagement() {
                   <th className="px-6 py-3 text-left text-gray-700">Категория</th>
                   <th className="px-6 py-3 text-left text-gray-700">Качен от</th>
                   <th className="px-6 py-3 text-left text-gray-700">Дата</th>
-                  <th className="px-6 py-3 text-left text-gray-700">Размер</th>
-                  <th className="px-6 py-3 text-right text-gray-700">Действия</th>
+                  <th className="px-11 py-3 text-right text-gray-700">Действия</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -276,7 +282,6 @@ export function ArchiveManagement() {
                         {new Date(doc.createdAt).toLocaleDateString('bg-BG')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">-</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -285,6 +290,13 @@ export function ArchiveManagement() {
                           title="Изтегли"
                         >
                           <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenInBrowser(doc)}
+                          className="p-2 text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
+                          title="Отвори в браузър"
+                        >
+                          <ExternalLink className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(doc)}
@@ -379,6 +391,20 @@ export function ArchiveManagement() {
                   onChange={(e) => setUploadDescription(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              {/* Видимост за жители */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isVisibleToResidents"
+                  checked={isVisibleToResidents}
+                  onChange={(e) => setIsVisibleToResidents(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="isVisibleToResidents" className="text-gray-700 cursor-pointer">
+                  Видим за жителите
+                </label>
               </div>
             </div>
 

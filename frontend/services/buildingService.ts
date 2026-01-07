@@ -1,5 +1,5 @@
 import { api } from '../config/api';
-import type { Transaction, TransactionType, TransactionStatus, Document } from '../types/database';
+import { Transaction, TransactionType, TransactionStatus, Document, PaymentMethod } from '../types/database';
 
 export interface CreateBuildingRequest {
   address: string;
@@ -69,7 +69,7 @@ export interface CreateExpenseRequest {
   description: string;
   fundType: 'REPAIR' | 'GENERAL';
   documentUrl: string | null;
-  paymentMethod: 'SYSTEM' | 'CASH' | 'BANK';
+  paymentMethod: PaymentMethod; // Използва PaymentMethod enum
 }
 
 class BuildingService {

@@ -9,7 +9,7 @@ export interface UploadResponse {
 }
 
 // Document type enum (съгласно backend)
-export type DocumentType = 'PROTOCOL' | 'FINANCIAL' | 'INCIDENT' | 'CONTRACT' | 'CORRESPONDENCE' | 'OTHER';
+export type DocumentType = 'PROTOCOL' | 'RULEBOOK' | 'CONTRACT' | 'DECISION' | 'OTHER';
 
 // Document metadata от backend
 export interface DocumentMetadata {
@@ -19,7 +19,7 @@ export interface DocumentMetadata {
   type: DocumentType;
   fileUrl: string;
   uploaderName: string;
-  isVisible: true;
+  isVisible: boolean;
   createdAt: string;
 }
 
@@ -55,10 +55,9 @@ class DocumentService {
   async getCategories(): Promise<DocumentCategory[]> {
     return [
       { id: 'PROTOCOL', name: 'Протоколи', description: 'Протоколи от общи събрания' },
-      { id: 'FINANCIAL', name: 'Финанси', description: 'Финансови документи и отчети' },
-      { id: 'INCIDENT', name: 'Инциденти', description: 'Документация за инциденти' },
+      { id: 'RULEBOOK', name: 'Правилници', description: 'Правилници за управление' },
       { id: 'CONTRACT', name: 'Договори', description: 'Договори с доставчици и изпълнители' },
-      { id: 'CORRESPONDENCE', name: 'Кореспонденция', description: 'Писма и кореспонденция' },
+      { id: 'DECISION', name: 'Решения', description: 'Решения на събранията' },
       { id: 'OTHER', name: 'Други', description: 'Други документи' },
     ];
   }
