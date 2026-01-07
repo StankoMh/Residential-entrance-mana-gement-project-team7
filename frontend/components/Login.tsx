@@ -20,6 +20,13 @@ export function Login() {
       setEmail(savedEmail);
       setRememberMe(true);
     }
+
+    // Проверяваме дали сесията е изтекла
+    const sessionExpired = sessionStorage.getItem('sessionExpired');
+    if (sessionExpired === 'true') {
+      setError('Сесията ви изтече. Моля влезте отново.');
+      sessionStorage.removeItem('sessionExpired');
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,10 +52,12 @@ export function Login() {
       console.error('Login error:', err);
       
       // Обработка на различни типове грешки
-      if (err.message) {
+      if (err.status === 401) {
+        setError('Грешен имейл или парола. Моля опитайте отново.');
+      } else if (err.message) {
         setError(err.message);
       } else {
-        setError('Грешен имейл или парола. Моля опитайте отново.');
+        setError('Грешка при вход. Моля опитайте отново.');
       }
     } finally {
       setLoading(false);

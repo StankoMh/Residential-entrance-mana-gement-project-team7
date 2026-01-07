@@ -441,16 +441,25 @@ function JoinHomeModal({
 
     try {
       await unitService.join(formData);
+      // Reset form only on success
+      setFormData({
+        accessCode: '',
+        residentsCount: 1,
+        area: 0,
+      });
       onSuccess();
     } catch (err: any) {
-      // Проверка за грешка при невалиден код
+      // Проверка за грешка при невалиден код - НЕ затваряме модала
       if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found') || err.message?.toLowerCase().includes('invalid')) {
         setError('Кодът за достъп е невалиден или не съществува.');
-      } else if (err.message?.toLowerCase().includes('already')) {
+      } else if (err.message?.toLowerCase().includes('already') || err.message?.includes('409')) {
         setError('Вече сте присъединени към това жилище.');
       } else {
         setError(err.message || 'Грешка при присъединяване към жилище');
       }
+      setLoading(false);
+      // НЕ извикваме onSuccess() когато има грешка
+      return;
     } finally {
       setLoading(false);
     }

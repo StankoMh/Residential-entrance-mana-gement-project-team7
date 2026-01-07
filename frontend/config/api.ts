@@ -9,7 +9,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: unknown
+    public data?: unknown,
+    public response?: any
   ) {
     super(message);
     this.name = 'ApiError';
@@ -34,7 +35,17 @@ axiosInstance.interceptors.response.use(
     const errorData = error.response?.data as any;
     const message = errorData?.message || errorData?.error || error.message || `HTTP Error: ${status}`;
     
-    throw new ApiError(message, status, errorData);
+    // Ако получим 401 (Unauthorized), пренасочваме към login
+    if (status === 401) {
+      // Проверяваме дали не сме вече на login страницата
+      if (!window.location.pathname.includes('/login')) {
+        // Запазваме флаг че сесията е изтекла
+        sessionStorage.setItem('sessionExpired', 'true');
+        window.location.href = '/login';
+      }
+    }
+    
+    throw new ApiError(message, status, errorData, error.response);
   }
 );
 
@@ -47,14 +58,14 @@ class ApiClient {
   }
 
   // GET request
-  async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const response = await this.axios.get<T>(endpoint, { params });
     return response.data;
   }
 
   // POST request
-  async post<T>(endpoint: string, body?: unknown): Promise<T> {
-    const response = await this.axios.post<T>(endpoint, body);
+  async post<T>(endpoint: string, body?: unknown, config?: any): Promise<T> {
+    const response = await this.axios.post<T>(endpoint, body, config);
     return response.data;
   }
 

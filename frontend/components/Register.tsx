@@ -164,7 +164,7 @@ export function Register() {
             {/* Потвърждение на парола */}
             <div>
               <label className="block text-gray-700 mb-2">Потвърдете паролата</label>
-              <div className="relative">
+              <div className="relative mb-15">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="password"
@@ -177,20 +177,6 @@ export function Register() {
                   placeholder="••••••••"
                 />
               </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-600"
-              />
-              <label htmlFor="rememberMe" className="ml-2 text-gray-700">
-                Запомни ме
-              </label>
             </div>
 
             {/* Бутон за регистрация */}

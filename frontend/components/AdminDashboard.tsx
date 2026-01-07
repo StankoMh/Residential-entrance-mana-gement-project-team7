@@ -7,6 +7,7 @@ import { EventsManagement } from './EventsManagement';
 import { VotingManagement } from './VotingManagement';
 import { ArchiveManagement } from './ArchiveManagement';
 import { HomesAndBuildings } from './HomesAndBuildings';
+import { ProfilePage } from './ProfilePage';
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminView, adminViews } from '../types/views';
@@ -48,6 +49,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           {currentView === 'events' && <EventsManagement />}
           {currentView === 'voting' && <VotingManagement />}
           {currentView === 'archive' && <ArchiveManagement />}
+          {currentView === 'profile' && <ProfilePage />}
         </main>
       </div>
     </div>

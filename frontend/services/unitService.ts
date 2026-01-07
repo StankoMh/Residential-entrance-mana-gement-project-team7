@@ -75,8 +75,19 @@ export const unitService = {
   join: async (data: JoinUnitRequest): Promise<JoinUnitResponse> => {
     try {
       return await api.post<JoinUnitResponse>('/units/join', data);
-    } catch (error) {
-      // Mock данни за тестване без backend
+    } catch (error: any) {
+      // Проверяваме дали грешката е от backend (404, 409, и т.н.)
+      // Ако е реална грешка от backend, хвърляме я нагоре
+      if (error.message?.includes('404') || 
+          error.message?.includes('409') || 
+          error.message?.toLowerCase().includes('not found') ||
+          error.message?.toLowerCase().includes('invalid') ||
+          error.message?.toLowerCase().includes('already')) {
+        throw error;
+      }
+      
+      // Ако е connection error (няма backend), връщаме mock данни
+      console.warn('Backend not available, using mock data for unit join');
       return {
         id: Math.floor(Math.random() * 100) + 1,
         unitNumber: Math.floor(Math.random() * 50) + 1,
@@ -88,6 +99,7 @@ export const unitService = {
       };
     }
   },
+
 
   // Получи моите апартаменти (с buildingInfo)
   getMyUnits: async (): Promise<UnitResponseFromAPI[]> => {

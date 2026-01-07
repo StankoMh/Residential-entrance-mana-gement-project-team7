@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, Mail, Calendar, Edit2, Save, X, LogOut } from 'lucide-react';
+import { User, Mail, Calendar, LogOut } from 'lucide-react';
 import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { useSelection } from '../contexts/SelectionContext';
@@ -10,9 +10,6 @@ export function ProfilePage() {
   const { clearSelection } = useSelection();
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedFirstName, setEditedFirstName] = useState('');
-  const [editedLastName, setEditedLastName] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -25,23 +22,12 @@ export function ProfilePage() {
       setError('');
       const userData = await authService.me();
       setUser(userData);
-      setEditedFirstName(userData.firstName);
-      setEditedLastName(userData.lastName);
     } catch (err) {
       console.error('Error loading user data:', err);
       setError('Грешка при зареждане на профила');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditToggle = () => {
-    if (isEditing) {
-      // Отказ - връщаме оригиналните имена
-      setEditedFirstName(user?.firstName || '');
-      setEditedLastName(user?.lastName || '');
-    }
-    setIsEditing(!isEditing);
   };
 
   const handleLogout = async () => {
@@ -103,31 +89,6 @@ export function ProfilePage() {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b flex items-center justify-between">
           <h2 className="text-gray-900">Основна информация</h2>
-          {!isEditing ? (
-            <button
-              onClick={handleEditToggle}
-              className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              Редактирай
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                Запази
-              </button>
-              <button
-                onClick={handleEditToggle}
-                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4" />
-                Отказ
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="p-6 space-y-6">
@@ -138,26 +99,7 @@ export function ProfilePage() {
             </div>
             <div className="flex-1">
               <label className="block text-sm text-gray-600 mb-1">Пълно име</label>
-              {isEditing ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={editedFirstName}
-                    onChange={(e) => setEditedFirstName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Въведете първо име"
-                  />
-                  <input
-                    type="text"
-                    value={editedLastName}
-                    onChange={(e) => setEditedLastName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Въведете фамилия"
-                  />
-                </div>
-              ) : (
-                <p className="text-gray-900">{user.firstName} {user.lastName}</p>
-              )}
+              <p className="text-gray-900">{user.firstName} {user.lastName}</p>
             </div>
           </div>
 
@@ -203,22 +145,10 @@ export function ProfilePage() {
       {/* Информация за сигурността */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b">
-          <h2 className="text-gray-900">Сигурност</h2>
+          <h2 className="text-gray-900">Изход</h2>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-            <div>
-              <p className="text-gray-900 mb-1">Смяна на парола</p>
-            </div>
-            <button
-              onClick={() => alert('Функционалността за смяна на парола ще бъде добавена скоро')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Промени парола
-            </button>
-          </div>
-
+        <div className="p-6">
           <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
             <div>
               <p className="text-gray-900 mb-1">Излизане от профила</p>

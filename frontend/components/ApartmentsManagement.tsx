@@ -205,11 +205,6 @@ export function ApartmentsManagement() {
                       <td className="px-6 py-4">
                         {isOccupied && unit.ownerInfo ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600">
-                                {unit.ownerInfo.firstName[0]}{unit.ownerInfo.lastName[0]}
-                              </span>
-                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-gray-900">{unit.ownerInfo.firstName} {unit.ownerInfo.lastName}</span>
                               {unit.isVerified === false && (
