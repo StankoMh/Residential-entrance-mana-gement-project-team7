@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class RevocationEntry {
 
     @Id
-    private Integer userId;
+    private Long userId;
 
     private Long revokedAt;
 }

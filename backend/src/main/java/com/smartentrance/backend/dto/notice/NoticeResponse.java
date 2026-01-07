@@ -4,7 +4,7 @@
 
     public record NoticeResponse(
             Integer id,
-            Integer createdByUserId,
+            Long createdByUserId,
             String title,
             String description,
             String location,

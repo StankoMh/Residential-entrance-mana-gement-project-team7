@@ -24,6 +24,10 @@ public class Transaction {
     @JoinColumn(name = "unit_id", nullable = false)
     private Unit unit;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "billable_user_id")
+    private User responsibleUser;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 

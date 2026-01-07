@@ -15,5 +15,5 @@ public record UnitResponse(
         OwnerInfo ownerInfo
 ) {
     public record BuildingInfo(Integer id, String name, String address) {}
-    public record OwnerInfo (Integer id, String firstName, String lastName, String email) {}
+    public record OwnerInfo (Long id, String firstName, String lastName, String email) {}
 }

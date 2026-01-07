@@ -1,12 +1,16 @@
 package com.smartentrance.backend.controller;
 
+import com.smartentrance.backend.security.UserPrincipal;
 import com.smartentrance.backend.service.FileStorageService;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -22,9 +26,9 @@ public class FileController {
     private final FileStorageService fileStorageService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal UserPrincipal principal) {
 
-        String fileName = fileStorageService.storeFile(file);
+        String fileName = fileStorageService.storeFile(file, principal.user());
 
         String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/uploads/files/")
@@ -43,6 +47,7 @@ public class FileController {
     }
 
     @GetMapping("/files/{fileName:.+}")
+    @Hidden
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) throws IOException {
         Resource resource = fileStorageService.loadFileAsResource(fileName);
 

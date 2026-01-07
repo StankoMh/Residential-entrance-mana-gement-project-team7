@@ -62,7 +62,7 @@ public class AuthenticationService {
         }
 
         try {
-            Integer userId = principal.user().getId();
+            Long userId = principal.user().getId();
             User user = userService.getUserById(userId);
             return userMapper.toResponse(user);
         } catch (EntityNotFoundException e) {
