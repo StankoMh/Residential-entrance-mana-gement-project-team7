@@ -277,23 +277,6 @@ export function PaymentCheckout() {
                   </div>
                 </div>
 
-                {/* Тип фонд (само за cash и bank) */}
-                {(paymentMethod === 'cash' || paymentMethod === 'bank') && (
-                  <div>
-                    <label className="block text-gray-700 mb-2">
-                      Тип фонд *
-                    </label>
-                    <select
-                      value={fundType}
-                      onChange={(e) => setFundType(e.target.value as FundType)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={FundType.GENERAL}>Фонд Поддръжка</option>
-                      <option value={FundType.REPAIR}>Фонд Ремонти</option>
-                    </select>
-                  </div>
-                )}
-
                 {/* Допълнителна информация според метода */}
                 {paymentMethod === 'stripe' && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

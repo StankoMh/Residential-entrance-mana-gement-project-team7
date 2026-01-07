@@ -588,7 +588,7 @@ export function PaymentsManagement() {
                         item.transactionStatus === TransactionStatus.CONFIRMED
                           ? "Потвърдено"
                           : item.transactionStatus === TransactionStatus.PENDING
-                          ? "За одобрение"
+                          ? "Изчакващо"
                           : "Отхвърлено";
 
                       const isPending =
@@ -634,7 +634,13 @@ export function PaymentsManagement() {
                         paymentMethodText = "-";
                       }
 
-                      const showReceiptDocument = isConfirmed && item.documentUrl;
+                      // За PENDING показваме само качения от потребителя документ (externalDocumentUrl)
+                      const showPendingDocument = isPending && item.externalDocumentUrl;
+                      // За CONFIRMED показваме генерираната разписка (documentUrl)
+                      const showConfirmedDocument = isConfirmed && item.documentUrl;
+                      // За CONFIRMED + Stripe показваме и Stripe receipt линк
+                      const showStripeReceipt = isConfirmed && item.externalDocumentUrl && 
+                        (item.paymentMethod === PaymentMethod.STRIPE || item.paymentMethod === "STRIPE");
 
                       // Проверка дали е плащане (постъпване на пари)
                       const isPayment = item.transactionType === TransactionType.PAYMENT;
@@ -687,7 +693,18 @@ export function PaymentsManagement() {
                                   </button>
                                 </>
                               )}
-                              {showReceiptDocument && (
+                              {showPendingDocument && (
+                                <a
+                                  href={item.externalDocumentUrl!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Документ
+                                </a>
+                              )}
+                              {showConfirmedDocument && (
                                 <a
                                   href={item.documentUrl!}
                                   target="_blank"
@@ -698,9 +715,9 @@ export function PaymentsManagement() {
                                   Документ
                                 </a>
                               )}
-                              {item.externalDocumentUrl && (
+                              {showStripeReceipt && (
                                 <a
-                                  href={item.externalDocumentUrl}
+                                  href={item.externalDocumentUrl!}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors font-medium"
