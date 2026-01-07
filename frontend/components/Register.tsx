@@ -50,7 +50,9 @@ export function Register() {
       console.error('Registration error:', err);
       
       // Обработка на различни типове грешки
-      if (err.message) {
+      if (err.status === 409) {
+        setError('Потребител с този имейл вече съществува. Моля, използвайте друг имейл или влезте в профила си.');
+      } else if (err.message) {
         if (err.message.toLowerCase().includes('already exists') || 
             err.message.toLowerCase().includes('вече съществува') ||
             err.message.toLowerCase().includes('email already in use')) {
