@@ -40,10 +40,6 @@ public class UnitService {
         Unit unit = unitRepository.findByAccessCode(request.accessCode())
                 .orElseThrow(() -> new EntityNotFoundException("Invalid access code."));
 
-        if (unit.getResponsibleUser() != null) {
-            throw new EntityExistsException("This unit is already occupied.");
-        }
-
         unit.setResponsibleUser(currentUser);
         unit.setResidentsCount(request.residentsCount());
         unit.setArea(request.area());

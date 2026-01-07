@@ -94,6 +94,19 @@ public class BuildingService {
         buildingRepository.save(building);
     }
 
+    @Transactional
+    @PreAuthorize("@buildingSecurity.isManager(#buildingId, principal.user)")
+    public void transferManagerRole(Integer buildingId, Long newManagerId) {
+        Building building = buildingRepository.findById(buildingId)
+                .orElseThrow(() -> new EntityNotFoundException("Building not found"));
+
+        User newManager = userService.getUserReference(newManagerId);
+        if (newManager == null) throw new EntityNotFoundException("New manager user not found");
+
+        building.setManager(newManager);
+        buildingRepository.save(building);
+    }
+
     public UpdateBudgetRequest getCurrentBudgets(Integer buildingId) {
         Building building = buildingRepository.findById(buildingId)
                 .orElseThrow(() -> new EntityNotFoundException("Building not found"));

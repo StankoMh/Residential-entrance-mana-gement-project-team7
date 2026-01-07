@@ -42,26 +42,6 @@ public class BuildingSecurity {
                 .orElse(false);
     }
 
-
-    public boolean canAccessFile(String fileName, User user) {
-        Optional<BuildingDocument> doc = documentRepository.findByFileUrl(fileName);
-        if (doc.isPresent()) {
-            BuildingDocument d = doc.get();
-            boolean isManager = d.getBuilding().getManager().getId().equals(user.getId());
-            boolean hasAccess = hasAccess(d.getBuilding().getId(), user);
-
-            return isManager || (hasAccess && d.isVisibleToResidents());
-        }
-
-        Optional<Transaction> tx = transactionRepository.findByProofUrl(fileName);
-        if (tx.isPresent()) {
-            Transaction t = tx.get();
-            return canAccessUnitFinance(t.getUnit().getId(), user);
-        }
-
-        return false;
-    }
-
     public boolean isUnitResponsible(Long unitId, User user) {
         return unitRepository.findById(unitId)
                 .map(unit -> unit.getResponsibleUser() != null &&

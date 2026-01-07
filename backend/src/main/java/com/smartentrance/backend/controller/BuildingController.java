@@ -45,4 +45,13 @@ public class BuildingController {
         buildingService.updateBuildingBudgets(buildingId, req, principal.user());
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{buildingId}/transfer-manager/{userId}")
+    public ResponseEntity<Void> transferManager(@PathVariable Integer buildingId,
+                                                @PathVariable Long userId,
+                                                @AuthenticationPrincipal UserPrincipal principal) {
+
+        buildingService.transferManagerRole(buildingId, userId);
+        return ResponseEntity.ok().build();
+    }
 }
