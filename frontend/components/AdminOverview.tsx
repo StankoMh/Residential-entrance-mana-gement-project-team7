@@ -2,18 +2,31 @@ import { Users, DollarSign, TrendingUp, AlertCircle, Building2, Archive, FileTex
 import { useSelection } from '../contexts/SelectionContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { buildingService, type FinancialSummary } from '../services/buildingService';
+import { buildingService, type FinancialSummary, type BuildingExpense } from '../services/buildingService';
 import { unitService, type UnitResponseFromAPI } from '../services/unitService';
 import { pollService, type Poll } from '../services/pollService';
 import { eventService, type Notice } from '../services/eventService';
 import type { Transaction, Document } from '../types/database';
 import { TransactionType, TransactionStatus, DocumentType } from '../types/database';
 
+// Тип за обединени транзакции и разходи
+type CombinedItem = {
+  id: number;
+  type: 'payment' | 'expense';
+  amount: number;
+  description: string;
+  date: string;
+  paymentMethod?: string;
+  fundType?: 'REPAIR' | 'GENERAL';
+};
+
 export function AdminOverview() {
   const { selectedBuilding } = useSelection();
   const navigate = useNavigate();
   const [recentPayments, setRecentPayments] = useState<Transaction[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [expenses, setExpenses] = useState<BuildingExpense[]>([]);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [units, setUnits] = useState<UnitResponseFromAPI[]>([]);
@@ -27,6 +40,7 @@ export function AdminOverview() {
 
   useEffect(() => {
     loadRecentPayments();
+    loadExpenses();
     loadRecentDocuments();
     loadUnits();
     loadFinancialSummary();
@@ -44,12 +58,25 @@ export function AdminOverview() {
         TransactionType.PAYMENT,
         TransactionStatus.CONFIRMED
       );
-      // Вземи последните 4 плащания
-      setRecentPayments(transactions.slice(0, 4));
+      setRecentPayments(transactions);
     } catch (err) {
       console.error('Error loading recent payments:', err);
     } finally {
       setLoadingPayments(false);
+    }
+  };
+
+  const loadExpenses = async () => {
+    if (!selectedBuilding) return;
+    
+    try {
+      setLoadingExpenses(true);
+      const expensesData = await buildingService.getExpenses(selectedBuilding.id);
+      setExpenses(expensesData);
+    } catch (err) {
+      console.error('Error loading expenses:', err);
+    } finally {
+      setLoadingExpenses(false);
     }
   };
 
@@ -126,6 +153,59 @@ export function AdminOverview() {
 
   // Сметни общо жители
   const totalResidents = units.reduce((sum, unit) => sum + unit.residents, 0);
+
+  // Сметни общо гласове от всички гласувания
+  const totalVotesFromAllPolls = polls.reduce((sum, poll) => sum + poll.totalVotes, 0);
+
+  // Намери последното гласуване (най-новото по endAt дата)
+  const latestPoll = polls.length > 0 
+    ? polls.reduce((latest, poll) => {
+        return new Date(poll.endAt) > new Date(latest.endAt) ? poll : latest;
+      }, polls[0])
+    : null;
+
+  // Раздели събития на предстоящи и отминали
+  const now = new Date();
+  const upcomingNotices = notices.filter(notice => new Date(notice.noticeDateTime) > now);
+  const pastNotices = notices.filter(notice => new Date(notice.noticeDateTime) <= now);
+
+  // Комбинирай плащания и разходи и сортирай по дата
+  const getCombinedTransactions = (): CombinedItem[] => {
+    const combined: CombinedItem[] = [];
+
+    // Добави плащания
+    recentPayments.forEach((payment) => {
+      combined.push({
+        id: payment.id,
+        type: 'payment',
+        amount: payment.amount,
+        description: payment.description || 'Плащане',
+        date: payment.createdAt,
+        paymentMethod: payment.paymentMethod,
+      });
+    });
+
+    // Добави разходи
+    expenses.forEach((expense) => {
+      combined.push({
+        id: expense.id,
+        type: 'expense',
+        amount: expense.amount,
+        description: expense.description,
+        date: expense.expenseDate,
+        fundType: expense.fundType,
+      });
+    });
+
+    // Сортирай по дата (най-новите първи)
+    combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Вземи първите 4
+    return combined.slice(0, 4);
+  };
+
+  const recentTransactions = getCombinedTransactions();
+  const isLoadingTransactions = loadingPayments || loadingExpenses;
 
   const getDocumentTypeLabel = (type: DocumentType) => {
     switch (type) {
@@ -204,9 +284,12 @@ export function AdminOverview() {
           <div className="text-gray-900 mb-1">
             {loadingPolls ? '...' : polls.length}
           </div>
-          <div className="text-gray-600 text-sm mb-1">Общо вотове</div>
+          <div className="text-gray-600 text-sm mb-1">Общо Гласувания</div>
           <div className="text-gray-500 text-xs">
-            {loadingPolls ? 'зареждане...' : `общо ${polls.length} гласувания`}
+            {loadingPolls ? 'зареждане...' : 
+              latestPoll ? `${latestPoll.totalVotes} гласа в последното` : 
+              'няма гласувания'
+            }
           </div>
         </div>
 
@@ -221,50 +304,58 @@ export function AdminOverview() {
             </div>
           </div>
           <div className="text-gray-900 mb-1">
-            {loadingNotices ? '...' : notices.length}
+            {loadingNotices ? '...' : upcomingNotices.length}
           </div>
-          <div className="text-gray-600 text-sm mb-1">Общо събития</div>
+          <div className="text-gray-600 text-sm mb-1">Предстоящи събития</div>
           <div className="text-gray-500 text-xs">
-            {loadingNotices ? 'зареждане...' : `общо ${notices.length} събития`}
+            {loadingNotices ? 'зареждане...' : `${pastNotices.length} отминали събития`}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Последни плащания */}
+        {/* Последни плащания и разходи */}
         <div className="bg-white rounded-lg shadow flex flex-col">
           <div className="p-6 border-b">
-            <h2 className="text-gray-900">Последни плащания</h2>
+            <h2 className="text-gray-900">Последни плащания и разходи</h2>
           </div>
           <div className="divide-y flex-1">
-            {loadingPayments ? (
+            {isLoadingTransactions ? (
               <div className="p-4 text-gray-500">Зареждане...</div>
-            ) : recentPayments.length > 0 ? (
-              recentPayments.map((payment) => (
-                <div key={payment.id} className="p-4 hover:bg-gray-50 transition-colors">
+            ) : recentTransactions.length > 0 ? (
+              recentTransactions.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-gray-900">{payment.description || 'Плащане'}</div>
+                      <div className="text-gray-900">{item.description}</div>
                       <div className="text-gray-600 text-sm">
-                        {payment.paymentMethod === 'STRIPE' ? 'Карта' : 
-                         payment.paymentMethod === 'CASH' ? 'Кеш' : 
-                         'Банков превод'}
+                        {item.type === 'payment' ? (
+                          item.paymentMethod === 'STRIPE' ? 'Карта' : 
+                          item.paymentMethod === 'CASH' ? 'Кеш' : 
+                          'Банков превод'
+                        ) : (
+                          item.fundType === 'REPAIR' ? 'Ремонти' : 'Поддръжка'
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-gray-900">{payment.amount.toFixed(2)} EUR</div>
+                      <div className={`${
+                        item.type === 'payment' ? 'text-green-600' : 'text-purple-600'
+                      }`}>
+                        {item.type === 'payment' ? '+' : '-'}{item.amount.toFixed(2)} EUR
+                      </div>
                       <div className="text-gray-500 text-sm">
-                        {new Date(payment.createdAt).toLocaleDateString('bg-BG')}
+                        {new Date(item.date).toLocaleDateString('bg-BG')}
                       </div>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-gray-500">Няма последни плащания</div>
+              <div className="p-4 text-gray-500">Няма последни плащания и разходи</div>
             )}
           </div>
-          {!loadingPayments && (
+          {!isLoadingTransactions && (
             <div className="p-4 border-t mt-auto">
               <button
                 onClick={() => navigate('/admin/dashboard/payments')}

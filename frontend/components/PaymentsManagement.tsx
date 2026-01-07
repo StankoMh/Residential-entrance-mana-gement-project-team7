@@ -1,332 +1,224 @@
 import { useState, useEffect } from "react";
-import { useSelection } from "../contexts/SelectionContext";
-import { buildingService } from "../services/buildingService";
-import { paymentService } from "../services/paymentService";
-import { unitService } from "../services/unitService";
-import type { Transaction } from "../types/database";
+import { useNavigate } from "react-router-dom";
 import {
+  CheckCircle,
+  Clock,
+  XCircle,
+  Banknote,
+  Receipt,
+  FileText,
+  Download,
+  DollarSign,
+  ExternalLink,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import {
+  Transaction,
   TransactionType,
   TransactionStatus,
   FundType,
   PaymentMethod,
 } from "../types/database";
-import type { BudgetData } from "../services/buildingService";
-import type { UnitResponseFromAPI } from "../services/unitService";
-import { 
-  CheckCircle, 
-  Clock, 
-  XCircle, 
-  Download, 
-  DollarSign, 
-  Save, 
-  Zap, 
-  Banknote,
-  FileText 
-} from 'lucide-react';
+import {
+  BuildingExpense,
+  BudgetData,
+  FinancialSummary,
+} from "../services/buildingService";
+import { UnitResponseFromAPI } from "../services/unitService";
+import { buildingService } from "../services/buildingService";
+import { paymentService } from "../services/paymentService";
+import { unitService } from "../services/unitService";
+import { useSelection } from "../contexts/SelectionContext";
+import { CashPaymentModal } from "./CashPaymentModal";
+import { ExpenseModal } from "./ExpenseModal";
+import { BudgetModal } from "./BudgetModal";
+import { toast } from "sonner";
+
+// Тип за обединени транзакции и разходи
+type CombinedItem = {
+  id: number;
+  type: "transaction" | "expense";
+  transactionType?: TransactionType;
+  description: string;
+  fundType: FundType | string; // Приема и enum и string literals
+  amount: number;
+  transactionStatus?: TransactionStatus;
+  paymentMethod?: PaymentMethod | string; // Приема всички PaymentMethod стойности
+  createdAt: string;
+  documentUrl?: string | null;
+  externalDocumentUrl?: string | null;
+  expenseDate?: string;
+  createdBy?: string;
+};
 
 export function PaymentsManagement() {
   const { selectedBuilding } = useSelection();
-  const [transactions, setTransactions] = useState<
-    Transaction[]
-  >([]);
-  const [budget, setBudget] = useState<BudgetData | null>(null);
-  const [budgetForm, setBudgetForm] = useState({
-    repairBudget: "",
-    maintenanceBudget: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [savingBudget, setSavingBudget] = useState(false);
-  const [triggeringFees, setTriggeringFees] = useState(false);
-  const [showBudgetForm, setShowBudgetForm] = useState(false);
-  const [filter, setFilter] = useState<
-    "all" | "pending" | "confirmed"
-  >("all");
-  const [typeFilter, setTypeFilter] = useState<
-    "all" | TransactionType
-  >("all");
-  const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
+  const navigate = useNavigate();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [expenses, setExpenses] = useState<BuildingExpense[]>([]);
   const [units, setUnits] = useState<UnitResponseFromAPI[]>([]);
-  const [cashPaymentForm, setCashPaymentForm] = useState({
-    unitId: "",
-    amount: "",
-    fundType: "GENERAL" as FundType,
-    note: "",
-  });
-  const [submittingCashPayment, setSubmittingCashPayment] = useState(false);
+  const [budget, setBudget] = useState<BudgetData | null>(null);
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  
+  const [filter, setFilter] = useState<"all" | "pending" | "confirmed">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | TransactionType>("all");
 
   useEffect(() => {
     if (selectedBuilding) {
-      loadData();
-      loadUnits();
+      loadAllData();
     }
   }, [selectedBuilding, typeFilter]);
 
-  const loadData = async () => {
+  const loadAllData = async () => {
     if (!selectedBuilding) return;
 
     try {
       setLoading(true);
-      const [txData, budgetData] = await Promise.all([
+      const [txData, expensesData, unitsData, budgetData, financialSummaryData] = await Promise.all([
         buildingService.getTransactions(
           selectedBuilding.id,
           typeFilter === "all" ? undefined : typeFilter,
-          undefined,
+          undefined
         ),
+        buildingService.getExpenses(selectedBuilding.id),
+        unitService.getAllByBuilding(selectedBuilding.id),
         buildingService.getBudget(selectedBuilding.id),
+        buildingService.getFinancialSummary(selectedBuilding.id),
       ]);
+
       setTransactions(txData);
+      setExpenses(expensesData);
+      setUnits(unitsData);
       setBudget(budgetData);
-      if (budgetData) {
-        setBudgetForm({
-          repairBudget: budgetData.repairBudget.toString(),
-          maintenanceBudget:
-            budgetData.maintenanceBudget.toString(),
-        });
-      }
+      setFinancialSummary(financialSummaryData);
     } catch (err) {
       console.error("Error loading data:", err);
-      // Set default budget if loading fails
-      setBudget({
-        repairBudget: 0,
-        maintenanceBudget: 0,
-        protocolFileUrl: null,
-      });
-      setBudgetForm({
-        repairBudget: "0",
-        maintenanceBudget: "0",
-      });
+      toast.error("Грешка при зареждане на данните");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTransactions = async () => {
-    if (!selectedBuilding) return;
-
-    try {
-      const data = await buildingService.getTransactions(
-        selectedBuilding.id,
-        typeFilter === "all" ? undefined : typeFilter,
-        undefined,
-      );
-      setTransactions(data);
-    } catch (err) {
-      console.error("Error loading transactions:", err);
-    }
-  };
-
-  const loadUnits = async () => {
-    if (!selectedBuilding) return;
-
-    try {
-      const data = await unitService.getAllByBuilding(selectedBuilding.id);
-      setUnits(data);
-    } catch (err) {
-      console.error("Error loading units:", err);
-    }
-  };
-
-  const handleSaveBudget = async () => {
-    if (!selectedBuilding) return;
-
-    const repairBudget = parseFloat(budgetForm.repairBudget);
-    const maintenanceBudget = parseFloat(
-      budgetForm.maintenanceBudget,
-    );
-
-    if (isNaN(repairBudget) || isNaN(maintenanceBudget)) {
-      alert("Моля, въведете валидни числа");
-      return;
-    }
-
-    if (repairBudget < 0 || maintenanceBudget < 0) {
-      alert("Бюджетът не може да бъде отрицателен");
-      return;
-    }
-
-    setSavingBudget(true);
-
-    try {
-      await buildingService.updateBudget(selectedBuilding.id, {
-        repairBudget,
-        maintenanceBudget,
-        protocolFileUrl: budget?.protocolFileUrl || null,
-      });
-
-      alert("Месечният бюджет е обновен успешно!");
-      setShowBudgetForm(false);
-      loadData();
-    } catch (err: any) {
-      console.error("Error saving budget:", err);
-      alert("Грешка при запазване на бюджета");
-    } finally {
-      setSavingBudget(false);
-    }
-  };
-
-  const handleTriggerFees = async () => {
-    if (!selectedBuilding) return;
-
-    if (
-      !confirm(
-        "Сигурни ли сте, че искате да генерирате месечни такси за всички апартаменти? Това обикновено се случва автоматично всеки месец.",
-      )
-    ) {
-      return;
-    }
-
-    setTriggeringFees(true);
-
-    try {
-      const response = await buildingService.triggerMonthlyFees(
-        selectedBuilding.id,
-      );
-      alert(
-        response || "Месечните такси са генерирани успешно!",
-      );
-      loadTransactions();
-    } catch (err: any) {
-      console.error("Error triggering fees:", err);
-      alert("Грешка при генериране на такси");
-    } finally {
-      setTriggeringFees(false);
-    }
-  };
-
   const handleApprove = async (transactionId: number) => {
-    if (!confirm("Потвърдете одобрението на това плащане"))
-      return;
+    if (!confirm("Потвърдете одобрението на това плащане")) return;
 
     try {
       await paymentService.approveTransaction(transactionId);
-      loadTransactions();
+      toast.success("Плащането е одобрено успешно");
+      loadAllData();
     } catch (err) {
       console.error("Error approving transaction:", err);
-      alert("Грешка при одобрение на плащането");
+      toast.error("Грешка при одобрение на плащането");
     }
   };
 
   const handleReject = async (transactionId: number) => {
-    if (
-      !confirm(
-        "Сигурни ли сте, че искате да отхвърлите това плащане?",
-      )
-    )
+    if (!confirm("Сигурни ли сте, че искате да отхвърлите това плащане?"))
       return;
 
     try {
       await paymentService.rejectTransaction(transactionId);
-      loadTransactions();
+      toast.success("Плащането е отхвърлено");
+      loadAllData();
     } catch (err) {
       console.error("Error rejecting transaction:", err);
-      alert("Грешка при отхвърляне на плащането");
+      toast.error("Грешка при отхвърляне на плащането");
     }
   };
 
-  const handleCashPaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCashPaymentSubmit = async (data: {
+    unitId: number;
+    amount: number;
+    fundType: FundType;
+    note: string;
+  }) => {
+    try {
+      await paymentService.createCashPayment(data.unitId, {
+        amount: data.amount,
+        fundType: data.fundType,
+        note: data.note,
+      });
+      toast.success("Плащането е регистрирано успешно");
+      loadAllData();
+    } catch (err) {
+      console.error("Error creating cash payment:", err);
+      toast.error("Грешка при регистриране на плащането");
+      throw err;
+    }
+  };
+
+  const handleExpenseSubmit = async (data: {
+    amount: number;
+    description: string;
+    fundType: "REPAIR" | "GENERAL";
+    documentUrl: string;
+    paymentMethod: "SYSTEM" | "CASH" | "BANK";
+  }) => {
     if (!selectedBuilding) return;
 
-    const unitId = parseInt(cashPaymentForm.unitId);
-    const amount = parseFloat(cashPaymentForm.amount);
-
-    if (!unitId || isNaN(unitId)) {
-      alert("Моля, изберете апартамент");
-      return;
-    }
-
-    if (isNaN(amount) || amount <= 0) {
-      alert("Моля, въведете валидна сума");
-      return;
-    }
-
-    setSubmittingCashPayment(true);
-
     try {
-      await paymentService.createCashPayment(unitId, {
-        amount,
-        fundType: cashPaymentForm.fundType,
-        note: cashPaymentForm.note,
+      await buildingService.createExpense(selectedBuilding.id, {
+        amount: data.amount,
+        description: data.description,
+        fundType: data.fundType,
+        documentUrl: data.documentUrl || null,
+        paymentMethod: data.paymentMethod,
       });
-
-      alert("Плащането е регистрирано успешно!");
-      setShowCashPaymentModal(false);
-      setCashPaymentForm({
-        unitId: "",
-        amount: "",
-        fundType: "GENERAL" as FundType,
-        note: "",
-      });
-      loadTransactions();
-    } catch (err: any) {
-      console.error("Error creating cash payment:", err);
-      alert("Грешка при регистриране на плащането");
-    } finally {
-      setSubmittingCashPayment(false);
+      toast.success("Разходът е регистриран успешно");
+      loadAllData();
+    } catch (err) {
+      console.error("Error creating expense:", err);
+      toast.error("Грешка при регистриране на разхода");
+      throw err;
     }
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    if (filter === "all") return true;
-    if (filter === "pending")
-      return tx.transactionStatus === TransactionStatus.PENDING;
-    if (filter === "confirmed")
-      return (
-        tx.transactionStatus === TransactionStatus.CONFIRMED
-      );
-    return true;
-  });
+  const handleBudgetSubmit = async (data: {
+    maintenanceBudget: number;
+    repairBudget: number;
+  }) => {
+    if (!selectedBuilding) return;
 
-  // Статистики
-  const payments = transactions.filter(
-    (tx) => tx.type === "PAYMENT",
-  );
-  const confirmedPayments = payments.filter(
-    (p) => p.transactionStatus === TransactionStatus.CONFIRMED,
-  );
-  const pendingPayments = payments.filter(
-    (p) => p.transactionStatus === TransactionStatus.PENDING,
-  );
-  const rejectedPayments = payments.filter(
-    (p) => p.transactionStatus === TransactionStatus.REJECTED,
-  );
+    try {
+      await buildingService.updateBudget(selectedBuilding.id, {
+        maintenanceBudget: data.maintenanceBudget,
+        repairBudget: data.repairBudget,
+        protocolFileUrl: budget?.protocolFileUrl || null,
+      });
+      toast.success("Месечният бюджет е обновен успешно");
+      loadAllData();
+    } catch (err) {
+      console.error("Error updating budget:", err);
+      toast.error("Грешка при актуализиране на бюджета");
+      throw err;
+    }
+  };
 
-  const totalConfirmed = confirmedPayments.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
-  const totalPending = pendingPayments.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
-  const totalRejected = rejectedPayments.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
+  const handleGenerateFees = async () => {
+    if (!selectedBuilding) return;
+    if (!confirm("Сигурни ли сте, че искате да генерирате месечни такси за всички апартаменти?")) return;
 
-  const statusConfig = {
-    [TransactionStatus.CONFIRMED]: {
-      label: "Потвърдено",
-      color: "bg-green-100 text-green-700",
-      icon: CheckCircle,
-    },
-    [TransactionStatus.PENDING]: {
-      label: "Чакащо",
-      color: "bg-orange-100 text-orange-700",
-      icon: Clock,
-    },
-    [TransactionStatus.REJECTED]: {
-      label: "Отхвърлено",
-      color: "bg-red-100 text-red-700",
-      icon: XCircle,
-    },
+    try {
+      await buildingService.triggerMonthlyFees(selectedBuilding.id);
+      toast.success("Месечните такси са генерирани успешно");
+      loadAllData();
+    } catch (err) {
+      console.error("Error generating fees:", err);
+      toast.error("Грешка при генериране на таксите");
+    }
   };
 
   if (!selectedBuilding) {
     return (
       <div className="p-6">
         <p className="text-gray-600 text-center">
-          Моля, изберете вход за управление на плащания
+          Моля, изберете вход за преглед на плащанията
         </p>
       </div>
     );
@@ -335,612 +227,606 @@ export function PaymentsManagement() {
   if (loading) {
     return (
       <div className="p-6">
-        <p className="text-gray-600 text-center">
-          Зареждане...
-        </p>
+        <p className="text-gray-600 text-center">Зареждане...</p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-gray-900 mb-2">
-            Управление на плащания
-          </h1>
-          <p className="text-gray-600">
-            Преглед и одобрение на плащания
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowCashPaymentModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Banknote className="w-5 h-5" />
-            Регистрирай кеш плащане
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-            <Download className="w-5 h-5" />
-            Експорт
-          </button>
-        </div>
-      </div>
+  // Комбинирай транзакции и разходи (без Stripe Fee)
+  const combinedItems: CombinedItem[] = [
+    ...transactions
+      .filter((tx) => !(tx.type === TransactionType.FEE && tx.description.includes("Stripe Fee")))
+      .map((tx) => ({
+        id: tx.id,
+        type: "transaction" as const,
+        transactionType: tx.type,
+        description: tx.description,
+        fundType: tx.fundType,
+        amount: tx.amount,
+        transactionStatus: tx.transactionStatus,
+        paymentMethod: tx.paymentMethod,
+        createdAt: tx.createdAt,
+        documentUrl: tx.documentUrl,
+        externalDocumentUrl: tx.externalDocumentUrl,
+      })),
+    ...expenses.map((exp) => ({
+      id: exp.id,
+      type: "expense" as const,
+      description: exp.description,
+      fundType: exp.fundType,
+      amount: exp.amount,
+      createdAt: exp.expenseDate,
+      documentUrl: exp.documentUrl,
+      expenseDate: exp.expenseDate,
+      createdBy: exp.createdBy,
+    })),
+  ];
 
-      {/* Месечен бюджет */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex items-start justify-between mb-4">
+  // Сортирай по дата
+  combinedItems.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Филтрирай по статус
+  const filteredItems = combinedItems.filter((item) => {
+    if (item.type === "expense") return true;
+    if (!item.transactionStatus) return false;
+
+    if (filter === "pending")
+      return item.transactionStatus === TransactionStatus.PENDING;
+    if (filter === "confirmed")
+      return item.transactionStatus === TransactionStatus.CONFIRMED;
+    return true;
+  });
+
+  // Статистики
+  const transactionItems = filteredItems.filter((i) => i.type === "transaction");
+  const confirmedPayments = transactionItems.filter(
+    (i) => i.transactionStatus === TransactionStatus.CONFIRMED
+  );
+  const pendingPayments = transactionItems.filter(
+    (i) => i.transactionStatus === TransactionStatus.PENDING
+  );
+  const rejectedPayments = transactionItems.filter(
+    (i) => i.transactionStatus === TransactionStatus.REJECTED
+  );
+
+  const totalConfirmed = confirmedPayments.reduce((sum, i) => sum + i.amount, 0);
+  const totalPending = pendingPayments.reduce((sum, i) => sum + i.amount, 0);
+  const totalRejected = rejectedPayments.reduce((sum, i) => sum + i.amount, 0);
+
+  // Статистики по фондове от API (Real-time данни от backend)
+  const maintenanceIncome = financialSummary?.maintenanceFund.income ?? 0;
+  const maintenanceExpenses = financialSummary?.maintenanceFund.expense ?? 0;
+  const maintenanceBalance = financialSummary?.maintenanceFund.balance ?? 0;
+
+  const repairIncome = financialSummary?.repairFund.income ?? 0;
+  const repairExpenses = financialSummary?.repairFund.expense ?? 0;
+  const repairBalance = financialSummary?.repairFund.balance ?? 0;
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-gray-900 mb-2">Управление на плащания</h1>
+            <p className="text-gray-600">
+              Преглед и одобрение на плащания и разходи
+            </p>
+          </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-blue-600" />
-            </div>
+            <button
+              onClick={() => setShowCashPaymentModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Banknote className="w-5 h-5" />
+              Кеш плащане
+            </button>
+            <button
+              onClick={() => setShowExpenseModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              Разход
+            </button>
+            <button
+              onClick={() => setShowBudgetModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <DollarSign className="w-5 h-5" />
+              Бюджет
+            </button>
+            <button
+              onClick={() => handleGenerateFees()}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <Clock className="w-5 h-5" />
+              Генерирай такси
+            </button>
+            <button 
+              onClick={() => navigate('/admin/dashboard/finances')}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <TrendingUp className="w-5 h-5" />
+              Графики
+            </button>
+          </div>
+        </div>
+
+        {/* Месечен бюджет */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-blue-700">Месечен бюджет</h3>
+              <div className="flex items-center gap-3 mb-2">
+                <DollarSign className="w-8 h-8" />
+                <h2 className="text-white text-2xl">Месечен бюджет</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-6 mt-4">
+                <div>
+                  <div className="text-blue-100 text-sm mb-1">
+                    Фонд Поддръжка
+                  </div>
+                  <div className="text-3xl font-bold">
+                    {(budget?.maintenanceBudget ?? 0).toFixed(2)} EUR
+                  </div>
+                </div>
+                <div>
+                  <div className="text-purple-100 text-sm mb-1">
+                    Фонд Ремонти
+                  </div>
+                  <div className="text-3xl font-bold">
+                    {(budget?.repairBudget ?? 0).toFixed(2)} EUR
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm">
+              <Receipt className="w-16 h-16" />
             </div>
           </div>
-          {!showBudgetForm && (
-            <button
-              onClick={() => setShowBudgetForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              Редактирай
-            </button>
-          )}
         </div>
 
-        {showBudgetForm ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Фонд Поддръжка (EUR)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={budgetForm.maintenanceBudget}
-                  onChange={(e) =>
-                    setBudgetForm((prev) => ({
-                      ...prev,
-                      maintenanceBudget: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        {/* Статистики */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
               </div>
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Фонд Ремонти (EUR)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={budgetForm.repairBudget}
-                  onChange={(e) =>
-                    setBudgetForm((prev) => ({
-                      ...prev,
-                      repairBudget: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="text-gray-600">Потвърдени</div>
+            </div>
+            <div className="text-gray-900 mb-1">
+              {confirmedPayments.length} плащания
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Clock className="w-5 h-5 text-orange-600" />
+              </div>
+              <div className="text-gray-600">Чакащи одобрение</div>
+            </div>
+            <div className="text-gray-900 mb-1">
+              {pendingPayments.length} плащания
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="text-gray-600">Отхвърлени</div>
+            </div>
+            <div className="text-gray-900 mb-1">
+              {rejectedPayments.length} плащания
+            </div>
+          </div>
+        </div>
+
+        {/* Статистики по фондове */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Wallet className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="text-gray-900 font-medium">Фонд Поддръжка</div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Постъпления:</span>
+                <span className="text-green-600 font-medium">+{maintenanceIncome.toFixed(2)} EUR</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Разходи:</span>
+                <span className="text-red-600 font-medium">-{maintenanceExpenses.toFixed(2)} EUR</span>
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-900 font-medium">Баланс:</span>
+                  <span className={`font-bold text-lg ${maintenanceBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {maintenanceBalance >= 0 ? '+' : ''}{maintenanceBalance.toFixed(2)} EUR
+                  </span>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Wallet className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="text-gray-900 font-medium">Фонд Ремонти</div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Постъпления:</span>
+                <span className="text-green-600 font-medium">+{repairIncome.toFixed(2)} EUR</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 text-sm">Разходи:</span>
+                <span className="text-red-600 font-medium">-{repairExpenses.toFixed(2)} EUR</span>
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-900 font-medium">Баланс:</span>
+                  <span className={`font-bold text-lg ${repairBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {repairBalance >= 0 ? '+' : ''}{repairBalance.toFixed(2)} EUR
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Филтри */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex flex-wrap gap-2">
             <div className="flex gap-2">
               <button
-                onClick={handleSaveBudget}
-                disabled={savingBudget}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                onClick={() => setFilter("all")}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  filter === "all"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                {savingBudget ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Запазване...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Запази
-                  </>
-                )}
+                Всички
               </button>
               <button
-                onClick={() => {
-                  setShowBudgetForm(false);
-                  setBudgetForm({
-                    repairBudget:
-                      budget?.repairBudget.toString() || "",
-                    maintenanceBudget:
-                      budget?.maintenanceBudget.toString() ||
-                      "",
-                  });
-                }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={() => setFilter("pending")}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  filter === "pending"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                Отказ
+                За одобрение {pendingPayments.length > 0 && `(${pendingPayments.length})`}
               </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">
-                Фонд Поддръжка
-              </div>
-              <div className="text-blue-600">
-                {(budget?.maintenanceBudget ?? 0).toFixed(2)}{" "}
-                EUR
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">
-                Фонд Ремонти
-              </div>
-              <div className="text-purple-600">
-                {(budget?.repairBudget ?? 0).toFixed(2)} EUR
-              </div>
-            </div>
-            <div className="flex items-end">
               <button
-                onClick={handleTriggerFees}
-                disabled={triggeringFees}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-300 transition-colors disabled:bg-gray-400 text-sm w-full"
+                onClick={() => setFilter("confirmed")}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  filter === "confirmed"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                {triggeringFees ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Генериране...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4" />
-                    Debug: Генерирай такси
-                  </>
-                )}
+                Потвърдени
+              </button>
+            </div>
+
+            <div className="border-l border-gray-300 mx-2"></div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTypeFilter("all")}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  typeFilter === "all"
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Всички типове
+              </button>
+              <button
+                onClick={() => setTypeFilter("PAYMENT" as TransactionType)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  typeFilter === "PAYMENT"
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Плащания
+              </button>
+              <button
+                onClick={() => setTypeFilter("FEE" as TransactionType)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  typeFilter === "FEE"
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Такси
               </button>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Статистики */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="text-gray-600">Потвърдени</div>
-          </div>
-          <div className="text-gray-900 mb-1">
-            {confirmedPayments.length} плащания
-          </div>
-          <div className="text-green-600">
-            {totalConfirmed.toFixed(2)} EUR
-          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Clock className="w-5 h-5 text-orange-600" />
-            </div>
-            <div className="text-gray-600">
-              Чакащи одобрение
-            </div>
-          </div>
-          <div className="text-gray-900 mb-1">
-            {pendingPayments.length} плащания
-          </div>
-          <div className="text-orange-600">
-            {totalPending.toFixed(2)} EUR
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div className="text-gray-600">Отхвърлени</div>
-          </div>
-          <div className="text-gray-900 mb-1">
-            {rejectedPayments.length} плащания
-          </div>
-          <div className="text-red-600">
-            {totalRejected.toFixed(2)} EUR
-          </div>
-        </div>
-      </div>
-
-      {/* Филтри */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-wrap gap-2">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Всички
-            </button>
-            <button
-              onClick={() => setFilter("pending")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "pending"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Чакащи
-            </button>
-            <button
-              onClick={() => setFilter("confirmed")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "confirmed"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Потвърдени
-            </button>
-          </div>
-
-          <div className="border-l border-gray-300 mx-2"></div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTypeFilter("all")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                typeFilter === "all"
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Всички типове
-            </button>
-            <button
-              onClick={() =>
-                setTypeFilter("PAYMENT" as TransactionType)
-              }
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                typeFilter === "PAYMENT"
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Само плащания
-            </button>
-            <button
-              onClick={() =>
-                setTypeFilter("FEE" as TransactionType)
-              }
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                typeFilter === "FEE"
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Само такси
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Таблица с транзакции */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Тип
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Описание
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Фонд
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Метод
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Сума
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Статус
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Дата
-                </th>
-                <th className="px-6 py-3 text-left text-gray-700">
-                  Действия
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredTransactions.length === 0 ? (
+        {/* Таблица */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-8 text-center text-gray-600"
-                  >
-                    Няма налични транзакции
-                  </td>
+                  <th className="px-6 py-3 text-left text-gray-700">Тип</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Описаие</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Фонд</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Метод</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Сума</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Статус</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Дата</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Действия</th>
                 </tr>
-              ) : (
-                filteredTransactions.map((tx) => {
-                  const StatusIcon =
-                    statusConfig[tx.transactionStatus].icon;
-                  const isPending =
-                    tx.transactionStatus ===
-                    TransactionStatus.PENDING;
-                  const isConfirmed = 
-                    tx.transactionStatus ===
-                    TransactionStatus.CONFIRMED;
-                  const isPayment = tx.type === "PAYMENT";
-                  const isBankPayment = 
-                    tx.paymentMethod === PaymentMethod.BANK_TRANSFER || 
-                    tx.paymentMethod === PaymentMethod.BANK;
-                  
-                  // Показваме платежно нареждане за pending банкови плащания
-                  const showProofDocument = isPending && isBankPayment && tx.externalDocumentUrl;
-                  // Показваме разписка за потвърдени плащания
-                  const showReceiptDocument = isConfirmed && tx.documentUrl;
-
-                  return (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-gray-50"
+              </thead>
+              <tbody className="divide-y">
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-6 py-8 text-center text-gray-600"
                     >
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-1 rounded text-sm ${
-                            isPayment
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {isPayment ? "Плащане" : "Такса"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-900">
-                        {tx.description ||
-                          (isPayment ? "Плащане" : "Такса")}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {tx.fundType === "REPAIR"
-                          ? "Ремонти"
-                          : "Поддръжка"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {tx.paymentMethod === "STRIPE"
-                          ? "Карта"
-                          : tx.paymentMethod === "CASH"
-                            ? "Кеш"
-                            : tx.paymentMethod === "BANK" || tx.paymentMethod === "BANK_TRANSFER"
-                              ? "Банка"
-                              : "Система"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={
-                            isPayment
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {isPayment ? "+" : "-"}
-                          {Math.abs(tx.amount).toFixed(2)} EUR
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm w-fit ${statusConfig[tx.transactionStatus].color}`}
-                        >
-                          <StatusIcon className="w-4 h-4" />
-                          {
-                            statusConfig[tx.transactionStatus]
-                              .label
-                          }
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {new Date(
-                          tx.createdAt,
-                        ).toLocaleDateString("bg-BG", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-2">
-                          {/* Бутони за одобрение/отхвърляне */}
-                          {isPending && isPayment && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() =>
-                                  handleApprove(tx.id)
-                                }
-                                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-                              >
-                                Одобри
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleReject(tx.id)
-                                }
-                                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                              >
-                                Отхвърли
-                              </button>
+                      Няма налични транзакции
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => {
+                    if (item.type === "transaction" && item.transactionStatus) {
+                      const StatusIcon =
+                        item.transactionStatus === TransactionStatus.CONFIRMED
+                          ? CheckCircle
+                          : item.transactionStatus === TransactionStatus.PENDING
+                          ? Clock
+                          : XCircle;
+
+                      const statusColor =
+                        item.transactionStatus === TransactionStatus.CONFIRMED
+                          ? "text-green-700 bg-green-100"
+                          : item.transactionStatus === TransactionStatus.PENDING
+                          ? "text-orange-700 bg-orange-100"
+                          : "text-red-700 bg-red-100";
+
+                      const statusText =
+                        item.transactionStatus === TransactionStatus.CONFIRMED
+                          ? "Потвърдено"
+                          : item.transactionStatus === TransactionStatus.PENDING
+                          ? "За одобрение"
+                          : "Отхвърлено";
+
+                      const isPending =
+                        item.transactionStatus === TransactionStatus.PENDING;
+                      const isConfirmed =
+                        item.transactionStatus === TransactionStatus.CONFIRMED;
+
+                      // Type badge - само 2 цвята
+                      const typeBadge =
+                        item.transactionType === TransactionType.FEE ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                            Такса
+                          </span>
+                        ) : item.transactionType === TransactionType.PAYMENT ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            Плащане
+                          </span>
+                        ) : null;
+
+                      // Fund badge - само 2 цвята
+                      const fundBadge =
+                        item.fundType === FundType.REPAIR || item.fundType === 'REPAIR' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            Ремонти
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            Поддръжка
+                          </span>
+                        );
+
+                      // Payment method text
+                      let paymentMethodText = "";
+                      if (item.paymentMethod === PaymentMethod.CASH || item.paymentMethod === "CASH") {
+                        paymentMethodText = "Кеш";
+                      } else if (item.paymentMethod === PaymentMethod.STRIPE || item.paymentMethod === "STRIPE") {
+                        paymentMethodText = "Stripe";
+                      } else if (item.paymentMethod === PaymentMethod.SYSTEM || item.paymentMethod === "SYSTEM") {
+                        paymentMethodText = "Система";
+                      } else if (item.paymentMethod === PaymentMethod.BANK || item.paymentMethod === PaymentMethod.BANK_TRANSFER || item.paymentMethod === "BANK" || item.paymentMethod === "BANK_TRANSFER") {
+                        paymentMethodText = "Банков превод";
+                      } else {
+                        paymentMethodText = "-";
+                      }
+
+                      const showReceiptDocument = isConfirmed && item.documentUrl;
+
+                      // Проверка дали е плащане (постъпване на пари)
+                      const isPayment = item.transactionType === TransactionType.PAYMENT;
+
+                      return (
+                        <tr key={`tx-${item.id}`} className={isPayment ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}>
+                          <td className="px-6 py-4">{typeBadge}</td>
+                          <td className="px-6 py-4">
+                            <div className="text-gray-900">{item.description}</div>
+                          </td>
+                          <td className="px-6 py-4">{fundBadge}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <span className="text-sm">
+                                {paymentMethodText}
+                              </span>
                             </div>
-                          )}
-                          {/* Платежно нареждане за pending банкови плащания */}
-                          {showProofDocument && (
-                            <a
-                              href={tx.externalDocumentUrl!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-gray-900 font-medium">
+                              {item.amount.toFixed(2)} EUR
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}
                             >
-                              <FileText className="w-4 h-4" />
-                              Платежно нареждане
-                            </a>
-                          )}
-                          {/* Разписка за потвърдени плащания */}
-                          {showReceiptDocument && (
-                            <a
-                              href={tx.documentUrl!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
-                            >
-                              <FileText className="w-4 h-4" />
-                              Разписка
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusText}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-sm">
+                            {new Date(item.createdAt).toLocaleDateString("bg-BG")}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {isPending && (
+                                <>
+                                  <button
+                                    onClick={() => handleApprove(item.id)}
+                                    className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                  >
+                                    Одобри
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(item.id)}
+                                    className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                  >
+                                    Отхвърли
+                                  </button>
+                                </>
+                              )}
+                              {showReceiptDocument && (
+                                <a
+                                  href={item.documentUrl!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Документ
+                                </a>
+                              )}
+                              {item.externalDocumentUrl && (
+                                <a
+                                  href={item.externalDocumentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Stripe
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    } else if (item.type === "expense") {
+                      const fundBadge =
+                        item.fundType === FundType.REPAIR || item.fundType === 'REPAIR' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            Ремонти
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            Поддръжка
+                          </span>
+                        );
+
+                      return (
+                        <tr
+                          key={`expense-${item.id}`}
+                          className="hover:bg-gray-50 bg-red-50/30"
+                        >
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                              Разход
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-gray-900">{item.description}</div>
+                          </td>
+                          <td className="px-6 py-4">{fundBadge}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <span className="text-sm">
+                                {item.paymentMethod === "CASH"
+                                  ? "Кеш"
+                                  : item.paymentMethod === "BANK"
+                                  ? "Банка"
+                                  : item.paymentMethod === "SYSTEM"
+                                  ? "Система"
+                                  : "-"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-red-700 font-medium">
+                              -{item.amount.toFixed(2)} EUR
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              <CheckCircle className="w-3 h-3" />
+                              Потвърдено
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-sm">
+                            {new Date(item.createdAt).toLocaleDateString("bg-BG")}
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.documentUrl && (
+                              <a
+                                href={item.documentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Документ
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return null;
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Модал за кеш плащане */}
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[100] ${
-          showCashPaymentModal ? "block" : "hidden"
-        }`}
-        onClick={() => setShowCashPaymentModal(false)}
-      >
-        <div 
-          className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl relative z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h2 className="text-gray-900 text-xl font-bold mb-4">
-            Добавяне на кеш плащане
-          </h2>
-          <form onSubmit={handleCashPaymentSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Апартамент
-                </label>
-                <select
-                  value={cashPaymentForm.unitId}
-                  onChange={(e) =>
-                    setCashPaymentForm((prev) => ({
-                      ...prev,
-                      unitId: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Изберете апартамент</option>
-                  {units.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      Апартамент № {unit.unitNumber}{unit.ownerInfo ? ` - ${unit.ownerInfo.firstName} ${unit.ownerInfo.lastName}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Сума (EUR)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={cashPaymentForm.amount}
-                  onChange={(e) =>
-                    setCashPaymentForm((prev) => ({
-                      ...prev,
-                      amount: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Фонд
-                </label>
-                <select
-                  value={cashPaymentForm.fundType}
-                  onChange={(e) =>
-                    setCashPaymentForm((prev) => ({
-                      ...prev,
-                      fundType: e.target.value as FundType,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="GENERAL">Общ</option>
-                  <option value="REPAIR">Ремонти</option>
-                  <option value="MAINTENANCE">Поддръжка</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm mb-2">
-                  Забележка
-                </label>
-                <input
-                  type="text"
-                  value={cashPaymentForm.note}
-                  onChange={(e) =>
-                    setCashPaymentForm((prev) => ({
-                      ...prev,
-                      note: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button
-                type="submit"
-                disabled={submittingCashPayment}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-              >
-                {submittingCashPayment ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Запазване...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Запази
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCashPaymentModal(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Отказ
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+      {/* Модали */}
+      <CashPaymentModal
+        isOpen={showCashPaymentModal}
+        onClose={() => setShowCashPaymentModal(false)}
+        onSubmit={handleCashPaymentSubmit}
+        units={units}
+      />
+
+      <ExpenseModal
+        isOpen={showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        onSubmit={handleExpenseSubmit}
+      />
+
+      <BudgetModal
+        isOpen={showBudgetModal}
+        onClose={() => setShowBudgetModal(false)}
+        budget={budget}
+        onSubmit={handleBudgetSubmit}
+      />
+    </>
   );
 }

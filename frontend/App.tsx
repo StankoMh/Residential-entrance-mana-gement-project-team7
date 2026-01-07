@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage';
+import { FinancePage } from './pages/FinancePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthRedirect } from './components/AuthRedirect';
 import { SelectionProvider } from './contexts/SelectionContext';
@@ -127,6 +128,16 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PaymentCheckoutPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Финанси (само за админи) */}
+          <Route
+            path="/admin/dashboard/finances"
+            element={
+              <ProtectedRoute>
+                <FinancePage />
               </ProtectedRoute>
             }
           />
