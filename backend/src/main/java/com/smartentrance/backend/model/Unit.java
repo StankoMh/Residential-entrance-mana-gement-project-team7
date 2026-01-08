@@ -1,71 +1,72 @@
 package com.smartentrance.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
 
 @Entity
 @Table(name = "units", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"building_id", "unit_number"})
+        @UniqueConstraint(columnNames = {"building_id", "unit_number"}),
+        @UniqueConstraint(columnNames = "access_code")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Unit {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "building_id", nullable = false)
     @NotNull
     @ToString.Exclude
     private Building building;
 
     @Column(name = "unit_number", nullable = false)
-    @NotNull @NotBlank
-    private String unitNumber;
+    @NotNull
+    private Integer unitNumber;
 
-    @Column(nullable = false)
-    @NotNull @Positive
+    @Column()
+    @PositiveOrZero
     private BigDecimal area;
 
-    @Column(name = "resident_count", nullable = false)
-    @NotNull @PositiveOrZero
-    private Integer residents;
+    @Column(name = "resident_count")
+    @PositiveOrZero
+    private Integer residentsCount;
 
-    @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @Column(name = "access_code", nullable = false, length = 8, unique = true)
+    @NotNull
+    private String accessCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsible_user_id")
     @ToString.Exclude
-    private List<UnitFee> fees = new ArrayList<>();
+    private User responsibleUser;
+
+    @Column(name = "is_verified", nullable = false)
+    private boolean isVerified = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
     }
 }

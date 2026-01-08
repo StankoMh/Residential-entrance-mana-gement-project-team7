@@ -8,8 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.Formula;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,34 +33,40 @@ public class VotesPoll {
 
     @Column(name = "start_at", nullable = false)
     @NotNull
-    private LocalDateTime startAt;
+    private Instant startAt;
 
     @Column(name = "end_at", nullable = false)
     @NotNull
-    private LocalDateTime endAt;
+    private Instant endAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     @ToString.Exclude
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "building_id", nullable = false)
+    @JsonIgnore
+    @ToString.Exclude
+    private Building building;
+
+    @Formula("(SELECT COUNT(*) FROM units u WHERE u.building_id = id AND u.is_verified = true AND u.responsible_user_id IS NOT NULL)")
+    private Integer eligibleVotersCount;
+
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VotesOption> options = new ArrayList<>();
 
     @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @ToString.Exclude
-    private List<VotesOption> options = new ArrayList<>();
-
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    private List<UserVote> votes = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
     }
 }

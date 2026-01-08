@@ -2,22 +2,19 @@ package com.smartentrance.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "buildings", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"name", "address"})
+        @UniqueConstraint(name = "uk_google_id_entrance", columnNames = {"google_place_id", "entrance"})
 })
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Building {
@@ -27,31 +24,58 @@ public class Building {
     private Integer id;
 
     @Column(nullable = false)
-    @NotNull @NotBlank
     private String name;
 
     @Column(nullable = false)
-    @NotNull @NotBlank
     private String address;
+
+    @Column(nullable = false)
+    private String googlePlaceId;
+
+    @Column(nullable = false)
+    private String entrance;
+
+    @Column(nullable = false)
+    private Integer totalUnits;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id", nullable = false)
+    @JsonIgnore
+    @ToString.Exclude
+    private User manager;
 
     @OneToMany(mappedBy = "building", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @ToString.Exclude
+    @Builder.Default
     private List<Unit> units = new ArrayList<>();
 
+    @Column
+    private BigDecimal repairBudget;
+
+    @Column
+    private BigDecimal maintenanceBudget;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "budget_protocol_id")
+    private BuildingDocument budgetProtocol;
+
+    @Column(length = 34)
+    private String iban;
+
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
     }
 }

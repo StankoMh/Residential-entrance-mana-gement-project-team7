@@ -5,6 +5,7 @@ import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -30,6 +31,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleAuthErrors(AuthenticationException ex, HttpServletResponse response) {
         clearCookie(response);
         return buildResponse(HttpStatus.UNAUTHORIZED, "Authentication failed");
+    }
+
+    // TODO: remove this handler in production. This is only for development purposes since the database is reset often.
+    //  Tokens arent revoked when a user is deleted via database reset and foreign key errors occur frequently
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDatabaseConstraintErrors(DataIntegrityViolationException ex, HttpServletResponse response) {
+        String errorMessage = ex.getMostSpecificCause().getMessage().toLowerCase();
+
+        if (errorMessage.contains("foreign key") && (errorMessage.contains("users") || errorMessage.contains("manager_id") || errorMessage.contains("responsible_user"))) {
+            clearCookie(response);
+            return buildResponse(HttpStatus.UNAUTHORIZED, "User account no longer exists. Please login again.");
+        }
+
+        return buildResponse(HttpStatus.CONFLICT, "Database constraint violation: " + errorMessage);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalState(IllegalStateException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler({EntityNotFoundException.class, NoSuchElementException.class})
