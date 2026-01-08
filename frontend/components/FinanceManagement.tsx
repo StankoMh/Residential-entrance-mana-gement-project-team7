@@ -299,7 +299,7 @@ export function FinanceManagement() {
               <Wallet className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h3 className="text-gray-900">Ликвидни средства</h3>
+              <h3 className="text-gray-900">Средства</h3>
               <p className="text-sm text-gray-600">Кеш vs Банка</p>
             </div>
           </div>
@@ -386,9 +386,9 @@ export function FinanceManagement() {
             {/* Дивидер */}
             <hr className="my-4" />
 
-            {/* Ликвидни средства */}
+            {/* Средства */}
             <div className="border-l-4 border-green-500 pl-4">
-              <div className="text-sm text-gray-600 mb-1">Ликвидни средства</div>
+              <div className="text-sm text-gray-600 mb-1">Средства</div>
               <div className="text-green-600 text-xl mb-2">
                 {summary.totalBalance.toFixed(2)} EUR
               </div>
@@ -411,7 +411,7 @@ export function FinanceManagement() {
         </div>
       </div>
 
-      {/* Информационни бележки */}
+      {/* Информационни бележки 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex gap-3">
           <div className="text-blue-600 mt-0.5">ℹ️</div>
@@ -421,7 +421,7 @@ export function FinanceManagement() {
               Фонд Ремонти и Фонд Поддръжка.
             </p>
             <p className="mb-2">
-              <strong>Ликвидни средства</strong> показва как тези средства са
+              <strong>Средства</strong> показва как тези средства са
               разпределени между кеш в ръка и банкови сметки.
             </p>
             <p>
@@ -432,6 +432,7 @@ export function FinanceManagement() {
           </div>
         </div>
       </div>
+      */}
     </div>
   );
 }
