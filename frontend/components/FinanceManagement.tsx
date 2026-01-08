@@ -111,7 +111,7 @@ export function FinanceManagement() {
   // Данни за pie chart - кеш vs банка
   const cashBankData = [
     {
-      name: "Кеш в ръка",
+      name: "Кеш",
       value: summary.cashOnHands,
       color: "#10b981",
     },
