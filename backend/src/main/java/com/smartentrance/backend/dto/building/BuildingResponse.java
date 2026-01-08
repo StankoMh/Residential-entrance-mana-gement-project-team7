@@ -6,10 +6,11 @@ public record BuildingResponse(
         String address,
         String entrance,
         Integer totalUnits,
+        String iban,
         ManagerInfo managerInfo
 ) {
     public record ManagerInfo(
-            Integer id,
+            Long id,
             String firstName,
             String lastName,
             String email

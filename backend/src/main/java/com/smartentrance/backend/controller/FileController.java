@@ -1,0 +1,67 @@
+package com.smartentrance.backend.controller;
+
+import com.smartentrance.backend.security.UserPrincipal;
+import com.smartentrance.backend.service.FileStorageService;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.io.IOException;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/uploads")
+@RequiredArgsConstructor
+public class FileController {
+
+    private final FileStorageService fileStorageService;
+
+    @Operation(summary = "Upload File", description = "Uploads a file (PDF, Image) to server storage and returns a reference URL.")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal UserPrincipal principal) {
+
+        String fileName = fileStorageService.storeFile(file, principal.user());
+
+        String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/uploads/files/")
+                .path(fileName)
+                .toUriString();
+
+        String contentType = file.getContentType();
+        if (contentType == null) contentType = "application/octet-stream";
+
+        return ResponseEntity.ok(Map.of(
+                "fileName", fileName,
+                "url", fileDownloadUri,
+                "type", contentType,
+                "size", String.valueOf(file.getSize())
+        ));
+    }
+
+    @Operation(summary = "Download File", description = "Streams the file content securely if the user has access.")
+    @GetMapping("/files/{fileName:.+}")
+    @Hidden
+    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) throws IOException {
+        Resource resource = fileStorageService.loadFileAsResource(fileName);
+
+        String contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
+
+        if(contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .body(resource);
+    }
+}

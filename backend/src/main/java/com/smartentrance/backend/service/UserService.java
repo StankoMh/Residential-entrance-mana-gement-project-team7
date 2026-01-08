@@ -15,7 +15,7 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public User getUserReference(Integer id) {
+    public User getUserReference(Long id) {
         return userRepository.getReferenceById(id);
     }
 
@@ -32,7 +32,7 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
     }
 
-    public User getUserById(Integer id) {
+    public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
     }

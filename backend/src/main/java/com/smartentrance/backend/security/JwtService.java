@@ -99,8 +99,8 @@ public class JwtService {
         return claims.get("role", String.class);
     }
 
-    public Integer getUserId(Claims claims) {
-        return claims.get("id", Integer.class);
+    public Long getUserId(Claims claims) {
+        return claims.get("id", Long.class);
     }
 
     public Date getIssuedAt(Claims claims) {

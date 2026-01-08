@@ -1,6 +1,5 @@
 package com.smartentrance.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -8,8 +7,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "units", uniqueConstraints = {
@@ -24,7 +21,7 @@ public class Unit {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "building_id", nullable = false)
@@ -55,12 +52,6 @@ public class Unit {
 
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
-
-    @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    @ToString.Exclude
-    @Builder.Default
-    private List<UnitFee> fees = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

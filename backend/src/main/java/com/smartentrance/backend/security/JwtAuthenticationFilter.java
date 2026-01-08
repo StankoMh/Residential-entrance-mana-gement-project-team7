@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.validateAndGetClaims(jwt);
                 
                 Date issuedAt = jwtService.getIssuedAt(claims);
-                Integer userId = jwtService.getUserId(claims);
+                Long userId = jwtService.getUserId(claims);
 
                 if (revocationService.isTokenRevoked(userId, issuedAt.getTime() / 1000)) {
                     response.addHeader(HttpHeaders.SET_COOKIE, jwtService.getCleanCookie().toString());
