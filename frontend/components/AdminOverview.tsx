@@ -340,7 +340,7 @@ export function AdminOverview() {
                     </div>
                     <div className="text-right">
                       <div className={`${
-                        item.type === 'payment' ? 'text-green-600' : 'text-purple-600'
+                        item.type === 'payment' ? 'text-green-600' : 'text-red-600'
                       }`}>
                         {item.type === 'payment' ? '+' : '-'}{item.amount.toFixed(2)} EUR
                       </div>
@@ -371,7 +371,6 @@ export function AdminOverview() {
         <div className="bg-white rounded-lg shadow flex flex-col">
           <div className="p-6 border-b flex items-center justify-between">
             <h2 className="text-gray-900">Последни документи</h2>
-            <Archive className="w-5 h-5 text-gray-400" />
           </div>
           <div className="divide-y flex-1">
             {loadingDocuments ? (

@@ -126,6 +126,11 @@ class BuildingService {
   async triggerMonthlyFees(buildingId: number): Promise<string> {
     return await api.post<string>(`/debug/fees/${buildingId}`);
   }
+
+  // Transfer manager rights to a resident
+  async transferManager(buildingId: number, userId: number): Promise<void> {
+    await api.post<void>(`/buildings/${buildingId}/transfer-manager/${userId}`);
+  }
 }
 
 export const buildingService = new BuildingService();

@@ -135,7 +135,7 @@ export function PaymentsPage() {
           <div className="text-gray-900 mb-1">{balance.toFixed(2)} EUR</div>
           <div className="text-gray-600 text-sm mb-1">Текущ баланс</div>
           <div className="text-gray-500 text-xs">
-            {balance < 0 ? 'Дължима сума' : 'Преплатена сума'}
+            {balance < 0 ? 'Дължима сума' : 'Предплатена сума'}
           </div>
         </div>
 
@@ -175,7 +175,7 @@ export function PaymentsPage() {
             onClick={handlePayClick}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Плати сега
+            Добави средства
           </button>
         </div>
       </div>

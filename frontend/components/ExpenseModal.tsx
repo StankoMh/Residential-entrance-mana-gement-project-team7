@@ -112,8 +112,7 @@ export function ExpenseModal({
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="md:col-span-2">
-              <label className="block text-gray-700 mb-2">
-                Описание <span className="text-red-500">*</span>
+              <label className="block text-gray-700 mb-2">Разход <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -182,35 +181,31 @@ export function ExpenseModal({
               <label className="block text-gray-700 mb-2">
                 Качване на документ (опционално)
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="document-upload"
-                  disabled={uploading}
-                />
-                
-                {!uploadedFileName ? (
-                  <label
-                    htmlFor="document-upload"
-                    className={`w-full border-2 border-dashed border-blue-400 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors ${
-                      uploading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
+              {!uploadedFileName ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="document-upload"
+                    disabled={uploading}
+                  />
+                  <label htmlFor="document-upload" className="cursor-pointer">
                     {uploading ? (
-                      <Loader2 className="w-12 h-12 text-gray-400 animate-spin mb-3" />
+                      <Loader2 className="w-12 h-12 text-gray-400 animate-spin mx-auto mb-2" />
                     ) : (
-                      <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                     )}
-                    <p className="text-gray-700 mb-1">
+                    <p className="text-gray-600 mb-1">
                       {uploading ? 'Качване...' : 'Кликнете за избор на PDF файл'}
                     </p>
-                    <p className="text-sm text-gray-500">Само PDF документи</p>
+                    <p className="text-gray-400 text-sm">Само PDF документи</p>
                   </label>
-                ) : (
-                  <div className="w-full border-2 border-green-400 bg-green-50 rounded-lg p-4 flex items-center justify-between">
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FileText className="w-5 h-5 text-green-600" />
                       <span className="text-gray-700">{uploadedFileName}</span>
@@ -223,15 +218,9 @@ export function ExpenseModal({
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-gray-700">
-              💡 Разходът ще бъде видим за всички жители и ще се отрази във финансовите отчети.
-            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

@@ -37,3 +37,4 @@ build/
 frontend/.env
 frontend/node_modules
 frontend/deps.json
+frontend/.vite

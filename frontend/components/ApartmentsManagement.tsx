@@ -1,8 +1,10 @@
-import { Search, Mail, MapPin, MoreVertical, Edit2, Trash2, Copy, CheckCircle2, Users as UsersIcon, Ruler, AlertTriangle, Check, X } from 'lucide-react';
+import { Search, Mail, MapPin, MoreVertical, Edit2, Copy, CheckCircle2, Users as UsersIcon, Ruler, AlertTriangle, Check, X, UserCog } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { unitService, type UnitResponseFromAPI } from '../services/unitService';
 import { toast } from 'sonner';
 import { useSelection } from '../contexts/SelectionContext';
+import { buildingService } from '../services/buildingService';
+import { authService } from '../services/authService';
 
 export function ApartmentsManagement() {
   const { selectedBuilding } = useSelection();
@@ -77,17 +79,30 @@ export function ApartmentsManagement() {
     }
   };
 
-  const handleDelete = async (unit: UnitResponseFromAPI) => {
-    if (window.confirm(`Сигурни ли сте, че искате да изтриете апартамент ${unit.unitNumber}?`)) {
+  const handleTransferManager = async (unit: UnitResponseFromAPI) => {
+    if (!selectedBuilding || !unit.ownerInfo) return;
+
+    // Проверка дали текущият потребител е същият като жителя
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && currentUser.id === unit.ownerInfo.id) {
+      toast.error('Не можете да прехвърлите управлението на себе си');
+      setOpenMenuId(null);
+      return;
+    }
+
+    const residentName = `${unit.ownerInfo.firstName} ${unit.ownerInfo.lastName}`;
+    
+    if (window.confirm(`Сигурни ли сте, че искате да прехвърлите управлението на входа към ${residentName}?\n\nСлед това той ще стане домоуправител и вие ще загубите достъп до управлението.`)) {
       try {
-        await unitService.delete(unit.id);
-        await loadUnits(); // Презареждане на данните
-        console.log('Изтрит апартамент:', unit);
-        toast.success('Апартаментът беше успешно изтрит');
+        await buildingService.transferManager(selectedBuilding.id, unit.ownerInfo.id);
+        toast.success(`Управлението е прехвърлено успешно към ${residentName}`);
+        // След прехвърляне потребителят ще загуби достъп, затова препращаме към dashboard
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
       } catch (err) {
-        console.error('Грешка при изтриване:', err);
-        alert('Грешка при изтриване на апартамент');
-        toast.error('Грешка при изтриване на апартамент');
+        console.error('Грешка при прехвърляне на управлението:', err);
+        toast.error('Грешка при прехвърляне на управлението');
       }
     }
     setOpenMenuId(null);
@@ -205,6 +220,11 @@ export function ApartmentsManagement() {
                       <td className="px-6 py-4">
                         {isOccupied && unit.ownerInfo ? (
                           <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600">
+                                {unit.ownerInfo.firstName[0]}{unit.ownerInfo.lastName[0]}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-gray-900">{unit.ownerInfo.firstName} {unit.ownerInfo.lastName}</span>
                               {unit.isVerified === false && (
@@ -288,20 +308,22 @@ export function ApartmentsManagement() {
                                 <Edit2 className="w-4 h-4" />
                                 Редактирай
                               </button>
-                              <button
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                onClick={() => handleDelete(unit)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Изтрий
-                              </button>
-                              {unit.isVerified === false && (
+                              {unit.isVerified === false && unit.ownerInfo && (
                                 <button
                                   className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
                                   onClick={() => handleVerify(unit)}
                                 >
                                   <Check className="w-4 h-4" />
                                   Потвърди
+                                </button>
+                              )}
+                              {unit.ownerInfo && (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                  onClick={() => handleTransferManager(unit)}
+                                >
+                                  <UserCog className="w-4 h-4" />
+                                  Прехвърли управлението
                                 </button>
                               )}
                             </div>
@@ -319,7 +341,7 @@ export function ApartmentsManagement() {
 
       {/* Модал за редактиране */}
       {editingUnit && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
               <div>

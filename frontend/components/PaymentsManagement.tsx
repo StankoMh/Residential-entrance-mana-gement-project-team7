@@ -50,6 +50,8 @@ type CombinedItem = {
   externalDocumentUrl?: string | null;
   expenseDate?: string;
   createdBy?: string;
+  unitId?: number;
+  unitNumber?: number;
 };
 
 export function PaymentsManagement() {
@@ -67,7 +69,7 @@ export function PaymentsManagement() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   
   const [filter, setFilter] = useState<"all" | "pending" | "confirmed">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | TransactionType>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | TransactionType | "expense">("all");
 
   useEffect(() => {
     if (selectedBuilding) {
@@ -83,7 +85,7 @@ export function PaymentsManagement() {
       const [txData, expensesData, unitsData, budgetData, financialSummaryData] = await Promise.all([
         buildingService.getTransactions(
           selectedBuilding.id,
-          typeFilter === "all" ? undefined : typeFilter,
+          typeFilter === "all" || typeFilter === "expense" ? undefined : typeFilter,
           undefined
         ),
         buildingService.getExpenses(selectedBuilding.id),
@@ -236,6 +238,8 @@ export function PaymentsManagement() {
         createdAt: tx.createdAt,
         documentUrl: tx.documentUrl,
         externalDocumentUrl: tx.externalDocumentUrl,
+        unitId: tx.unitId,
+        unitNumber: tx.unitNumber,
       })),
     ...expenses.map((exp) => ({
       id: exp.id,
@@ -256,11 +260,24 @@ export function PaymentsManagement() {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  // Филтрирай по статус
+  // Филтрирай по статус и тип
   const filteredItems = combinedItems.filter((item) => {
-    if (item.type === "expense") return true;
+    // Разходите са имплицитно потвърдени и се показват при "all", "confirmed" и "expense"
+    if (item.type === "expense") {
+      // При филтър "pending" не показвай разходи
+      if (filter === "pending") return false;
+      // При typeFilter проверяваме дали показваме разходи
+      return typeFilter === "all" || typeFilter === "expense";
+    }
+    
+    // За транзакции проверяваме типа
+    if (typeFilter === "expense") return false; // Не показвай транзакции при филтър "Разходи"
+    if (typeFilter !== "all" && item.transactionType !== typeFilter) return false;
+    
+    // За транзакции проверяваме статуса
     if (!item.transactionStatus) return false;
 
+    // Филтър по статус (pending/confirmed/all)
     if (filter === "pending")
       return item.transactionStatus === TransactionStatus.PENDING;
     if (filter === "confirmed")
@@ -270,15 +287,15 @@ export function PaymentsManagement() {
 
   // Статистики
   const transactionItems = filteredItems.filter((i) => i.type === "transaction");
-  const confirmedPayments = transactionItems.filter(
-    (i) => i.transactionStatus === TransactionStatus.CONFIRMED
+  
+  // Статистики независими от филтрите - броят всички от оригиналните данни
+  const confirmedPayments = transactions.filter(
+    (tx) => tx.transactionStatus === TransactionStatus.CONFIRMED && tx.type === TransactionType.PAYMENT
   );
-  const pendingPayments = transactionItems.filter(
-    (i) => i.transactionStatus === TransactionStatus.PENDING
+  const pendingPayments = transactions.filter(
+    (tx) => tx.transactionStatus === TransactionStatus.PENDING && tx.type === TransactionType.PAYMENT
   );
-  const rejectedPayments = transactionItems.filter(
-    (i) => i.transactionStatus === TransactionStatus.REJECTED
-  );
+  const expenseItems = expenses; // Всички разходи
 
   // Статистики по фондове от API (Real-time данни от backend)
   const maintenanceIncome = financialSummary?.maintenanceFund.income ?? 0;
@@ -401,12 +418,12 @@ export function PaymentsManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="w-5 h-5 text-red-600" />
+                <FileText className="w-5 h-5 text-red-600" />
               </div>
-              <div className="text-gray-600">Отхвърлени</div>
+              <div className="text-gray-600">Разходи</div>
             </div>
             <div className="text-gray-900 mb-1">
-              {rejectedPayments.length} плащания
+              {expenseItems.length} разхода
             </div>
           </div>
         </div>
@@ -537,6 +554,16 @@ export function PaymentsManagement() {
               >
                 Такси
               </button>
+              <button
+                onClick={() => setTypeFilter("expense")}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  typeFilter === "expense"
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Разходи
+              </button>
             </div>
           </div>
         </div>
@@ -548,7 +575,8 @@ export function PaymentsManagement() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-gray-700">Тип</th>
-                  <th className="px-6 py-3 text-left text-gray-700">Описаие</th>
+                  <th className="px-6 py-3 text-left text-gray-700">Описание</th>
+                  <th className="px-6 py-3 text-center text-gray-700">Апартамент</th>
                   <th className="px-6 py-3 text-left text-gray-700">Фонд</th>
                   <th className="px-6 py-3 text-left text-gray-700">Метод</th>
                   <th className="px-6 py-3 text-left text-gray-700">Сума</th>
@@ -561,7 +589,7 @@ export function PaymentsManagement() {
                 {filteredItems.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-8 text-center text-gray-600"
                     >
                       Няма налични транзакции
@@ -588,7 +616,7 @@ export function PaymentsManagement() {
                         item.transactionStatus === TransactionStatus.CONFIRMED
                           ? "Потвърдено"
                           : item.transactionStatus === TransactionStatus.PENDING
-                          ? "Изчакващо"
+                          ? "За одобрение"
                           : "Отхвърлено";
 
                       const isPending =
@@ -636,7 +664,7 @@ export function PaymentsManagement() {
 
                       // За PENDING показваме само качения от потребителя документ (externalDocumentUrl)
                       const showPendingDocument = isPending && item.externalDocumentUrl;
-                      // За CONFIRMED показваме генерираната разписка (documentUrl)
+                      // За CONFIRMED показваме г��нерираната разписка (documentUrl)
                       const showConfirmedDocument = isConfirmed && item.documentUrl;
                       // За CONFIRMED + Stripe показваме и Stripe receipt линк
                       const showStripeReceipt = isConfirmed && item.externalDocumentUrl && 
@@ -650,6 +678,9 @@ export function PaymentsManagement() {
                           <td className="px-6 py-4">{typeBadge}</td>
                           <td className="px-6 py-4">
                             <div className="text-gray-900">{item.description}</div>
+                          </td>
+                          <td className="px-6 py-4 text-center text-gray-900">
+                            {item.unitNumber ? `${item.unitNumber}` : '-'}
                           </td>
                           <td className="px-6 py-4">{fundBadge}</td>
                           <td className="px-6 py-4">
@@ -720,10 +751,10 @@ export function PaymentsManagement() {
                                   href={item.externalDocumentUrl!}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                 >
                                   <ExternalLink className="w-3 h-3" />
-                                  Stripe
+                                  Stripe receipt
                                 </a>
                               )}
                             </div>
@@ -742,6 +773,16 @@ export function PaymentsManagement() {
                           </span>
                         );
 
+                      // Payment method text за разходи
+                      let expensePaymentMethodText = "-";
+                      if (item.paymentMethod === PaymentMethod.CASH || item.paymentMethod === "CASH") {
+                        expensePaymentMethodText = "Кеш";
+                      } else if (item.paymentMethod === PaymentMethod.BANK || item.paymentMethod === PaymentMethod.BANK_TRANSFER || item.paymentMethod === "BANK" || item.paymentMethod === "BANK_TRANSFER") {
+                        expensePaymentMethodText = "Банков превод";
+                      } else if (item.paymentMethod === PaymentMethod.SYSTEM || item.paymentMethod === "SYSTEM") {
+                        expensePaymentMethodText = "Система";
+                      }
+
                       return (
                         <tr
                           key={`expense-${item.id}`}
@@ -755,17 +796,14 @@ export function PaymentsManagement() {
                           <td className="px-6 py-4">
                             <div className="text-gray-900">{item.description}</div>
                           </td>
+                          <td className="px-6 py-4 text-center text-gray-900">
+                            {item.unitNumber ? `${item.unitNumber}` : '-'}
+                          </td>
                           <td className="px-6 py-4">{fundBadge}</td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 text-gray-600">
                               <span className="text-sm">
-                                {item.paymentMethod === "CASH"
-                                  ? "Кеш"
-                                  : item.paymentMethod === "BANK"
-                                  ? "Банка"
-                                  : item.paymentMethod === "SYSTEM"
-                                  ? "Система"
-                                  : "-"}
+                                {expensePaymentMethodText}
                               </span>
                             </div>
                           </td>

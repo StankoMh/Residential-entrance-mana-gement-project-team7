@@ -198,7 +198,7 @@ export function PaymentCheckout() {
 
         {/* Stripe Form Overlay */}
         {showStripeForm && stripeClientSecret && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 overflow-y-auto">
             <div className="min-h-screen flex items-center justify-center p-4 py-8">
               <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
                 <StripePaymentForm

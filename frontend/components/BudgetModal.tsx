@@ -82,12 +82,6 @@ export function BudgetModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-700">
-              💡 <strong>Месечният бюджет</strong> определя автоматичните такси които се генерират за всеки апартамент всеки месец.
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-gray-700 mb-2">
@@ -128,12 +122,6 @@ export function BudgetModal({
                 Месечна такса за ремонти и подобрения
               </p>
             </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-            <p className="text-sm text-gray-700">
-              ⚠️ Промяната на бюджета ще повлияе на бъдещите автоматично генерирани такси.
-            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, File, Download, Trash2, Search, Filter, Calendar, FileText, Image as ImageIcon, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
+import { Upload, File, Download, Trash2, Search, Filter, Calendar, FileText, Image as ImageIcon, FileSpreadsheet, Loader2, ExternalLink, X } from 'lucide-react';
 import { useSelection } from '../contexts/SelectionContext';
 import { documentService, DocumentMetadata, DocumentCategory, DocumentType } from '../services/documentService';
 import { toast } from 'sonner';
@@ -198,7 +198,12 @@ export function ArchiveManagement() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-gray-900">Архив</h1>
+        <div>
+          <h1 className="text-gray-900 mb-2">Управление на архив</h1>
+          <p className="text-gray-600">
+            Качвайте и управлявайте документи за {selectedBuilding.name}
+          </p>
+        </div>
         <button
           onClick={() => setIsUploadModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -318,115 +323,129 @@ export function ArchiveManagement() {
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-gray-900 mb-4">Качване на документ</h2>
-
-            <div className="space-y-4">
-              {/* Избор на категория */}
-              <div>
-                <label className="block text-gray-700 mb-2">Категория</label>
-                <select
-                  value={uploadType}
-                  onChange={(e) => setUploadType(e.target.value as DocumentType)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Избор на файл */}
-              <div>
-                <label className="block text-gray-700 mb-2">Файл</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="file-upload"
-                    accept=".pdf,application/pdf"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-600 mb-1">
-                      Кликнете за избор на PDF файл
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      Само PDF документи
-                    </p>
-                  </label>
-                </div>
-                {uploadFile && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <File className="w-4 h-4" />
-                      <span>{uploadFile.name}</span>
-                      <span className="text-gray-400">
-                        ({formatFileSize(uploadFile.size)})
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Заглавие */}
-              <div>
-                <label className="block text-gray-700 mb-2">Заглавие</label>
-                <input
-                  type="text"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Описание */}
-              <div>
-                <label className="block text-gray-700 mb-2">Описание</label>
-                <textarea
-                  value={uploadDescription}
-                  onChange={(e) => setUploadDescription(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Видимост за жители */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isVisibleToResidents"
-                  checked={isVisibleToResidents}
-                  onChange={(e) => setIsVisibleToResidents(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="isVisibleToResidents" className="text-gray-700 cursor-pointer">
-                  Видим за жителите
-                </label>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+              <h2 className="text-gray-900 text-xl">Качване на документ</h2>
               <button
                 onClick={() => {
                   setIsUploadModalOpen(false);
                   setUploadFile(null);
                 }}
-                disabled={uploading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Откажи
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={!uploadFile || uploading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploading ? 'Качване...' : 'Качи'}
+                <X className="w-6 h-6" />
               </button>
             </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleUpload(); }} className="p-6">
+              <div className="space-y-4">
+                {/* Избор на категория */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Категория</label>
+                  <select
+                    value={uploadType}
+                    onChange={(e) => setUploadType(e.target.value as DocumentType)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Избор на файл */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Файл</label>
+                  {!uploadFile ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        accept=".pdf,application/pdf"
+                      />
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-600 mb-1">
+                          Кликнете за избор на PDF файл
+                        </p>
+                        <p className="text-gray-400 text-sm">Само PDF документи</p>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-green-600" />
+                          <span className="text-gray-700">{uploadFile.name}</span>
+                          <span className="text-sm text-gray-500">
+                            ({formatFileSize(uploadFile.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUploadFile(null)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Заглавие */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Заглавие</label>
+                  <input
+                    type="text"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Видимост за жители */}
+                <div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="isVisibleToResidents"
+                      checked={isVisibleToResidents}
+                      onChange={(e) => setIsVisibleToResidents(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="isVisibleToResidents" className="text-gray-700 cursor-pointer">
+                      Видим за жителите
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUploadModalOpen(false);
+                    setUploadFile(null);
+                  }}
+                  disabled={uploading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Отказ
+                </button>
+                <button
+                  type="submit"
+                  disabled={!uploadFile || uploading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                >
+                  {uploading ? 'Качване...' : 'Качи'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

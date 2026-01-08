@@ -118,7 +118,8 @@ export function Archives() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-gray-900">Архив</h1>
+        <h1 className="text-gray-900 mb-2">Архив</h1>
+        <p className="text-gray-600">Преглед на документи на входа</p>
       </div>
 
       {/* Филтри */}

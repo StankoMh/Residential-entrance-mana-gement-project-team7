@@ -1,35 +1,35 @@
-import { MessageSquare, Receipt, Calendar, Users, Bell, Shield } from 'lucide-react';
+import { Calendar, Vote, Receipt, Archive, Users, Shield } from 'lucide-react';
 
 const features = [
   {
-    icon: MessageSquare,
-    title: 'Комуникация',
-    description: 'Лесна комуникация с управителя на входа'
+    icon: Calendar,
+    title: 'Събития',
+    description: 'Създавайте събития, уведомявайте жителите и следете за предстоящи срещи'
+  },
+  {
+    icon: Vote,
+    title: 'Гласувания',
+    description: 'Организирайте гласувания и проследявайте резултатите'
   },
   {
     icon: Receipt,
-    title: 'Разходи и плащания',
-    description: 'Проследяване на разходи, фактури и такси за общи части'
+    title: 'Плащания',
+    description: 'Управление на такси, вноски и разходи с поддръжка на Stripe, кеш и банкови преводи'
   },
   {
-    icon: Calendar,
-    title: 'Събития и срещи',
-    description: 'Организирайте събрания и уведомявайте жителите'
+    icon: Archive,
+    title: 'Архив на документи',
+    description: 'Съхранявайте протоколи, правилници, договори и решения'
   },
   {
     icon: Users,
     title: 'Управление на жители',
-    description: 'Централизирана база данни'
-  },
-  {
-    icon: Bell,
-    title: 'Известия',
-    description: 'Своевременни уведомления за важни събития и новини'
+    description: 'Управление на апартаменти и контрол на достъпа'
   },
   {
     icon: Shield,
     title: 'Сигурност',
-    description: 'Защитена платформа с контрол на достъпа до информацията'
+    description: 'Автентикация и защитен достъп до информацията на вашия вход'
   }
 ];
 

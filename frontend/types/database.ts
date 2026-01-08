@@ -235,6 +235,8 @@ export interface Transaction {
   documentUrl: string | null;
   externalDocumentUrl: string | null;
   createdAt: string;
+  unitId: number;
+  unitNumber: number;
 }
 
 // Receipt Details (from API)

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Receipt, Calendar, Vote, Home, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Receipt, Calendar, Vote, Archive, Home, TrendingUp } from 'lucide-react';
 import { AdminView } from '../types/views';
 import { useSelection } from '../contexts/SelectionContext';
 
@@ -14,15 +14,15 @@ const menuItems = [
   { id: 'payments' as AdminView, label: 'Плащания', icon: Receipt },
   { id: 'events' as AdminView, label: 'Събития', icon: Calendar },
   { id: 'voting' as AdminView, label: 'Гласувания', icon: Vote },
-  { id: 'archive' as AdminView, label: 'Архив', icon: FolderOpen },
+  { id: 'archive' as AdminView, label: 'Архив', icon: Archive },
 ];
 
 export function AdminSidebar({ currentView, onViewChange }: AdminSidebarProps) {
   const { selectedBuilding } = useSelection();
 
   return (
-    <aside className="w-64 bg-white border-r fixed left-0 top-[73px] bottom-0 overflow-y-auto">
-      <nav className="p-6">
+    <aside className="w-64 bg-white border-r fixed left-0 top-[85px] bottom-0 overflow-y-auto">
+      <nav className="p-4">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
