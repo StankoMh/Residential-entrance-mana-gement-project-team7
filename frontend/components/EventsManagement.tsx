@@ -1,6 +1,6 @@
-import { Plus, Calendar, Clock, MapPin, Trash2, Edit2, X } from 'lucide-react';
+import { Plus, Calendar, Clock, MapPin, Trash2, Edit2, X, Upload, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { eventService, type Notice, type CreateNoticeRequest, type NoticeType } from '../services/eventService';
+import { eventService, type Notice, type CreateNoticeRequest, type NoticeType, type DocumentType } from '../services/eventService';
 import { useSelection } from '../contexts/SelectionContext';
 import { toast } from 'sonner';
 import { DateTimePicker } from './ui/datetime-picker';
@@ -239,6 +239,13 @@ export function EventsManagement() {
                       в {noticeDate.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
+
+                  {notice.document && (
+                    <div className="mt-2 flex items-center gap-2 text-sm">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span className="text-blue-600">Има прикачен документ</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -293,6 +300,52 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Document upload state
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [documentDescription, setDocumentDescription] = useState('');
+  const [documentType, setDocumentType] = useState<DocumentType>('PROTOCOL');
+  const [documentVisibleToResidents, setDocumentVisibleToResidents] = useState(true);
+  const [showDocumentSection, setShowDocumentSection] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Моля, изберете PDF или изображение (JPG, PNG)');
+      e.target.value = '';
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error('Файлът е твърде голям. Максимален размер: 10MB');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadFile(file);
+    if (!documentTitle) {
+      setDocumentTitle(file.name);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setUploadFile(null);
+    setDocumentTitle('');
+    setDocumentDescription('');
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -325,7 +378,7 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
       // Създаваме Date обект от локалното време и го конвертираме в ISO string (UTC)
       const localDateTime = new Date(formData.dateTime);
       const noticeDateTime = localDateTime.toISOString();
-      
+
       const requestData: CreateNoticeRequest = {
         title: formData.title,
         description: formData.description,
@@ -334,10 +387,26 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
       };
 
       if (notice) {
+        // Edit mode: JSON endpoint (no document support)
         await eventService.update(notice.id, requestData);
         toast.success('Събитието беше обновено успешно!');
       } else {
-        await eventService.create(buildingId, requestData);
+        // Create mode
+        if (uploadFile) {
+          await eventService.createWithDocument(
+            buildingId,
+            requestData,
+            uploadFile,
+            {
+              title: documentTitle,
+              description: documentDescription,
+              type: documentType,
+              visibleToResidents: documentVisibleToResidents,
+            }
+          );
+        } else {
+          await eventService.create(buildingId, requestData);
+        }
         toast.success('Събитието беше създадено успешно!');
       }
 
@@ -422,6 +491,119 @@ function NoticeModal({ buildingId, notice, onClose, onSuccess }: NoticeModalProp
               placeholder="Партер, вход А"
             />
           </div>
+
+          {/* Document upload section - only in create mode */}
+          {!notice && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-gray-700">Прикачен документ (опционално)</label>
+                {!showDocumentSection && !uploadFile && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDocumentSection(true)}
+                    className="text-blue-600 text-sm hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Добави документ
+                  </button>
+                )}
+              </div>
+
+              {(showDocumentSection || uploadFile) && (
+                <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                  {!uploadFile ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="notice-file-upload"
+                        accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf"
+                      />
+                      <label htmlFor="notice-file-upload" className="cursor-pointer">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-600 mb-1">Кликнете за избор на файл</p>
+                        <p className="text-gray-400 text-sm">PDF или изображение (JPG, PNG)</p>
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      {/* File preview */}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-green-600" />
+                            <span className="text-gray-700">{uploadFile.name}</span>
+                            <span className="text-sm text-gray-500">({formatFileSize(uploadFile.size)})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRemoveFile}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Document metadata */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block mb-1 text-sm text-gray-700">Заглавие на документ *</label>
+                          <input
+                            type="text"
+                            value={documentTitle}
+                            onChange={(e) => setDocumentTitle(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Протокол от общо събрание"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm text-gray-700">Тип документ</label>
+                          <select
+                            value={documentType}
+                            onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="PROTOCOL">Протокол</option>
+                            <option value="RULEBOOK">Правилник</option>
+                            <option value="CONTRACT">Договор</option>
+                            <option value="DECISION">Решение</option>
+                            <option value="OTHER">Друго</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm text-gray-700">Описание</label>
+                          <textarea
+                            rows={2}
+                            value={documentDescription}
+                            onChange={(e) => setDocumentDescription(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Кратко описание на документа..."
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="document-visible"
+                            checked={documentVisibleToResidents}
+                            onChange={(e) => setDocumentVisibleToResidents(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="document-visible" className="text-sm text-gray-700 cursor-pointer">
+                            Видим за жителите
+                          </label>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
@@ -523,6 +705,32 @@ function EventManagementModal({ notice, onClose }: EventManagementModalProps) {
               readOnly
             />
           </div>
+
+          {notice.document && (
+            <div className="border-t pt-4 mt-4">
+              <label className="block mb-2 text-gray-700">Прикачен документ</label>
+              <div className="border border-gray-300 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <div className="text-gray-900">{notice.document.title}</div>
+                      <div className="text-sm text-gray-500">{notice.document.type}</div>
+                    </div>
+                  </div>
+                  <a
+                    href={`http://localhost:8080${notice.document.fileUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Отвори документа"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end pt-4 border-t">
             <button
