@@ -2,6 +2,7 @@ package com.smartentrance.backend;
 
 import com.smartentrance.backend.config.FileStorageProperties;
 import com.smartentrance.backend.payment.StripeProperties;
+import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,6 +19,14 @@ import java.util.TimeZone;
 public class BackendApplication {
 
 	static void main(String[] args) {
+		// Load .env file before Spring Boot initializes
+		Dotenv dotenv = Dotenv.configure()
+				.ignoreIfMissing()
+				.load();
+		dotenv.entries().forEach(entry ->
+			System.setProperty(entry.getKey(), entry.getValue())
+		);
+
 		SpringApplication.run(BackendApplication.class, args);
 	}
     @PostConstruct
