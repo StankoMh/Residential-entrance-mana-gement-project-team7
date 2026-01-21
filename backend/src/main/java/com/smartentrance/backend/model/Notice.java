@@ -39,6 +39,11 @@ public class Notice {
     @ToString.Exclude
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "document_id")
+    @ToString.Exclude
+    private BuildingDocument document;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

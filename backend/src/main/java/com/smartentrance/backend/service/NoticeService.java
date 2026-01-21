@@ -5,14 +5,18 @@ import com.smartentrance.backend.dto.notice.NoticeCreateRequest;
 import com.smartentrance.backend.dto.notice.NoticeResponse;
 import com.smartentrance.backend.dto.notice.NoticeUpdateRequest;
 import com.smartentrance.backend.mapper.NoticeMapper;
+import com.smartentrance.backend.model.BuildingDocument;
 import com.smartentrance.backend.model.Notice;
 import com.smartentrance.backend.model.User;
+import com.smartentrance.backend.model.enums.DocumentType;
+import com.smartentrance.backend.repository.DocumentRepository;
 import com.smartentrance.backend.repository.NoticeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,10 +28,35 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final BuildingService buildingService;
     private final NoticeMapper noticeMapper;
+    private final FileStorageService fileStorageService;
+    private final DocumentRepository documentRepository;
 
     @Transactional
     @PreAuthorize("@buildingSecurity.isManager(#buildingId, principal.user)")
-    public NoticeResponse createNotice(Integer buildingId, NoticeCreateRequest request, User currentUser) {
+    public NoticeResponse createNotice(Integer buildingId, NoticeCreateRequest request, MultipartFile documentFile, User currentUser) {
+        BuildingDocument document = null;
+
+        // Handle document upload if provided
+        if (documentFile != null && !documentFile.isEmpty()) {
+            // Upload file
+            String fileName = fileStorageService.storeFile(documentFile, currentUser);
+            String fileUrl = "/api/uploads/files/" + fileName;
+
+            // Create BuildingDocument entity
+            document = new BuildingDocument();
+            document.setBuilding(buildingService.getBuildingReference(buildingId));
+            document.setUploadedBy(currentUser);
+            document.setTitle(request.documentTitle() != null ? request.documentTitle() : request.title());
+            document.setDescription(request.documentDescription());
+            document.setType(request.documentType() != null ? request.documentType() : DocumentType.OTHER);
+            document.setFileUrl(fileUrl);
+            document.setVisibleToResidents(request.documentVisibleToResidents() != null ? request.documentVisibleToResidents() : true);
+
+            // Save document
+            document = documentRepository.save(document);
+        }
+
+        // Create notice
         Notice event = Notice.builder()
                 .title(request.title())
                 .description(request.description())
@@ -35,6 +64,7 @@ public class NoticeService {
                 .eventDateTime(request.noticeDateTime())
                 .building(buildingService.getBuildingReference(buildingId))
                 .createdBy(currentUser)
+                .document(document)  // Link document (null if not provided)
                 .build();
 
         Notice savedNotice = noticeRepository.save(event);

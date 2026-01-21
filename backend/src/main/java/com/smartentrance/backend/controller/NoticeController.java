@@ -9,9 +9,11 @@ import com.smartentrance.backend.service.NoticeService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,14 +25,26 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
-    @Operation(summary = "Create Notice", description = "Publishes a new announcement or General Assembly notice for the building residents.")
-    @PostMapping("/buildings/{buildingId}/notices")
-    public ResponseEntity<NoticeResponse> createNotice(
+    @Operation(summary = "Create Notice (JSON)", description = "Publishes a new announcement or General Assembly notice for the building residents.")
+    @PostMapping(value = "/buildings/{buildingId}/notices", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<NoticeResponse> createNoticeJson(
             @PathVariable Integer buildingId,
             @Valid @RequestBody NoticeCreateRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        NoticeResponse noticeResponse = noticeService.createNotice(buildingId, request, userPrincipal.user());
+        NoticeResponse noticeResponse = noticeService.createNotice(buildingId, request, null, userPrincipal.user());
+        return ResponseEntity.ok(noticeResponse);
+    }
+
+    @Operation(summary = "Create Notice (with Document)", description = "Publishes a new announcement with an optional document attachment.")
+    @PostMapping(value = "/buildings/{buildingId}/notices", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<NoticeResponse> createNoticeMultipart(
+            @PathVariable Integer buildingId,
+            @Valid @ModelAttribute NoticeCreateRequest request,
+            @RequestPart(value = "documentFile", required = false) MultipartFile documentFile,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        NoticeResponse noticeResponse = noticeService.createNotice(buildingId, request, documentFile, userPrincipal.user());
         return ResponseEntity.ok(noticeResponse);
     }
 

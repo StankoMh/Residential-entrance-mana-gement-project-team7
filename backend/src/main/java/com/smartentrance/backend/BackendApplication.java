@@ -13,24 +13,22 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import java.util.TimeZone;
 
 @SpringBootApplication
-@EnableConfigurationProperties({StripeProperties.class, FileStorageProperties.class})
+@EnableConfigurationProperties({ StripeProperties.class, FileStorageProperties.class })
 @EnableScheduling
 @EnableAsync
 public class BackendApplication {
 
-	static void main(String[] args) {
-		// Load .env file before Spring Boot initializes
-		Dotenv dotenv = Dotenv.configure()
-				.ignoreIfMissing()
-				.load();
-		dotenv.entries().forEach(entry ->
-			System.setProperty(entry.getKey(), entry.getValue())
-		);
+  static void main(String[] args) {
+    Dotenv dotenv = Dotenv.configure()
+        .ignoreIfMissing()
+        .load();
+    dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
-		SpringApplication.run(BackendApplication.class, args);
-	}
-    @PostConstruct
-    public void init() {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-    }
+    SpringApplication.run(BackendApplication.class, args);
+  }
+
+  @PostConstruct
+  public void init() {
+    TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+  }
 }

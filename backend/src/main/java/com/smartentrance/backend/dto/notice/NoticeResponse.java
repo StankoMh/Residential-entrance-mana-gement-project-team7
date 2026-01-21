@@ -1,12 +1,22 @@
-    package com.smartentrance.backend.dto.notice;
+package com.smartentrance.backend.dto.notice;
 
-    import java.time.Instant;
+import com.smartentrance.backend.model.enums.DocumentType;
 
-    public record NoticeResponse(
-            Integer id,
-            Long createdByUserId,
+import java.time.Instant;
+
+public record NoticeResponse(
+        Integer id,
+        Long createdByUserId,
+        String title,
+        String description,
+        String location,
+        Instant noticeDateTime,
+        DocumentInfo document
+) {
+    public record DocumentInfo(
+            Long id,
             String title,
-            String description,
-            String location,
-            Instant noticeDateTime
+            String fileUrl,
+            DocumentType type
     ) {}
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Clock, MapPin, Filter, CalendarDays, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Filter, CalendarDays, X, FileText, ExternalLink } from 'lucide-react';
 import { eventService, type Notice, type NoticeType } from '../services/eventService';
 import { useSelection } from '../contexts/SelectionContext';
 
@@ -277,6 +277,32 @@ function EventModal({ notice, onClose, isUpcoming }: EventModalProps) {
                 <div>
                   <div className="text-gray-700">Място</div>
                   <div className="text-gray-900">{notice.location}</div>
+                </div>
+              </div>
+            )}
+
+            {notice.document && (
+              <div className="border-t pt-4 mt-4">
+                <label className="block mb-2 text-gray-700">Прикачен документ</label>
+                <div className="border border-gray-300 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <div className="text-gray-900">{notice.document.title}</div>
+                        <div className="text-sm text-gray-500">{notice.document.type}</div>
+                      </div>
+                    </div>
+                    <a
+                      href={`http://localhost:8080${notice.document.fileUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Отвори документа"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
