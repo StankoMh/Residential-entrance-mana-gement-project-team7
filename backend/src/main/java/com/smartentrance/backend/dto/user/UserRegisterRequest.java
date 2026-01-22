@@ -21,4 +21,6 @@ public class UserRegisterRequest {
     private String password;
 
     private boolean rememberMe;
+
+    private String invitationCode;
 }

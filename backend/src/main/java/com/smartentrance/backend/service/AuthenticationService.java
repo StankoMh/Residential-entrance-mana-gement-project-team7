@@ -27,6 +27,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final InvitationService invitationService;
 
     public LoginResponse register(UserRegisterRequest request) {
         User user = userMapper.toEntity(request);
@@ -34,6 +35,10 @@ public class AuthenticationService {
         user.setHashedPassword(passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userService.saveUser(user);
+
+        if (request.getInvitationCode() != null && !request.getInvitationCode().isBlank()) {
+            invitationService.acceptInvitation(request.getInvitationCode(), savedUser);
+        }
 
         String token = jwtService.generateToken(new UserPrincipal(savedUser), request.isRememberMe());
 
@@ -46,6 +51,10 @@ public class AuthenticationService {
         );
 
         if (auth.getPrincipal() instanceof UserPrincipal userPrincipal) {
+            if (request.getInvitationCode() != null && !request.getInvitationCode().isBlank()) {
+                invitationService.acceptInvitation(request.getInvitationCode(), userPrincipal.user());
+            }
+
             String token = jwtService.generateToken(userPrincipal, request.isRememberMe());
 
             return new LoginResponse(token, userMapper.toResponse(userPrincipal.user()));

@@ -150,4 +150,9 @@ public class UnitService {
     public void saveAll(List<Unit> units){ unitRepository.saveAll(units); }
     public Optional<Unit> findById(Long id) { return unitRepository.findById(id); }
     public List<Unit> findAllByBuildingId(Integer buildingId) { return unitRepository.findAllByBuildingId(buildingId); }
+
+    public Unit getUnitById(Long id) {
+        return unitRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Unit not found with id: " + id));
+    }
 }
