@@ -34,7 +34,9 @@ spring:
           auth: true
           starttls:
             enable: true
+    enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:noreply@smartentrance.com}
+    
 
 application:
   security:
