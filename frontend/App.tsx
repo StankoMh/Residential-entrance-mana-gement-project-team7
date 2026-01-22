@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage';
+import AcceptInvitationPage from './pages/AcceptInvitationPage';
 import { FinancePage } from './pages/FinancePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthRedirect } from './components/AuthRedirect';
@@ -21,7 +22,7 @@ export default function App() {
 
   // Make Google Maps API key optional
   const googleMapsKey = import.meta.env?.VITE_GOOGLE_MAPS_KEY || '';
-  
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: googleMapsKey,
     libraries,
@@ -102,6 +103,12 @@ export default function App() {
                 <DashboardPage />
               </ProtectedRoute>
             }
+          />
+
+          {/* TESTING FOR INVITE  */}
+          <Route
+            path="/invitation/accept"
+            element={<AcceptInvitationPage />}
           />
 
           {/* Админ (kept for backward compatibility but works same as resident) */}
