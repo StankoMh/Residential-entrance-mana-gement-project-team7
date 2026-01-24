@@ -39,7 +39,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    @Column(name = "hashed_password", nullable = false)
+    @Column(name = "hashed_password", nullable = true)
     @JsonIgnore
     @ToString.Exclude
     private String hashedPassword;
