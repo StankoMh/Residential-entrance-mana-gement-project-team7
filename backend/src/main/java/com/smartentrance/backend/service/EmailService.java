@@ -5,14 +5,20 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+/**
+ * Production email service that sends real emails via SMTP
+ * Only active when NOT in 'dev' profile
+ */
 @Service
+@Profile("!dev")
 @RequiredArgsConstructor
 @Slf4j
-public class EmailService {
+public class EmailService implements EmailSender {
 
     private final JavaMailSender mailSender;
 

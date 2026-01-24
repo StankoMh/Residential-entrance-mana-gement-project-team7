@@ -26,7 +26,7 @@ public class InvitationService {
 
     private final InvitationRepository invitationRepository;
     private final UnitService unitService;
-    private final EmailService emailService;
+    private final EmailSender emailService;
     private final InvitationMapper invitationMapper;
 
     private static final int INVITATION_EXPIRY_DAYS = 7;
