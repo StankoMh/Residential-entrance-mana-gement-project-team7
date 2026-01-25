@@ -50,7 +50,7 @@ application:
         expiration: 604800000  # 7 days (Long term)
       cookie-name: accessToken
       secure-cookie: false       # Set to true in production with HTTPS
-  base-url: http://localhost:8080
+  base-url: http://localhost:3000  # Frontend URL for invitation links
 
 payment:
   currency: EUR
