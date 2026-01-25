@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import invitationService, { InvitationValidationResponse, AcceptInvitationRequest } from '../services/invitationService';
+import invitationService, { InvitationResponse } from '../services/invitationService';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,12 +10,13 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 const AcceptInvitationPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token');
+  const code = searchParams.get('code');
+  const email = searchParams.get('email');
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [invitation, setInvitation] = useState<InvitationValidationResponse | null>(null);
+  const [invitation, setInvitation] = useState<InvitationResponse | null>(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -26,23 +27,21 @@ const AcceptInvitationPage = () => {
   });
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (!token) {
-        setError('No invitation token provided');
+    const validateInvitation = async () => {
+      if (!code || !email) {
+        setError('Missing invitation code or email');
         setLoading(false);
         return;
       }
 
       try {
-        const result = await invitationService.validateInvitation(token);
-        if (!result.valid) {
-          if (result.expired) {
-            setError('This invitation has expired. Please contact your building administrator.');
-          } else if (result.alreadyUsed) {
-            setError('This invitation has already been used.');
-          } else {
-            setError('Invalid invitation link.');
-          }
+        const result = await invitationService.validateInvitation(code, email);
+        if (result.status === 'EXPIRED') {
+          setError('This invitation has expired. Please contact your building administrator.');
+        } else if (result.status === 'ACCEPTED') {
+          setError('This invitation has already been accepted.');
+        } else if (result.status === 'REVOKED') {
+          setError('This invitation has been revoked.');
         } else {
           setInvitation(result);
         }
@@ -53,8 +52,8 @@ const AcceptInvitationPage = () => {
       }
     };
 
-    validateToken();
-  }, [token]);
+    validateInvitation();
+  }, [code, email]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -80,20 +79,36 @@ const AcceptInvitationPage = () => {
     setSubmitting(true);
 
     try {
-      const acceptData: AcceptInvitationRequest = {
-        token: token!,
+      // Register user with invitation code
+      // The backend will automatically accept the invitation after registration
+      const registerData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
+        email: email!,
         password: formData.password,
-        phone: formData.phone || undefined,
+        invitationCode: code!,
+        rememberMe: false,
       };
 
-      await invitationService.acceptInvitation(acceptData);
-      navigate('/login', { 
-        state: { message: 'Account created successfully! Please login.' } 
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(registerData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+
+      navigate('/login', {
+        state: { message: 'Account created successfully! You can now login.' }
       });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to accept invitation');
+      setError(err.message || 'Failed to accept invitation and create account');
     } finally {
       setSubmitting(false);
     }
@@ -133,8 +148,8 @@ const AcceptInvitationPage = () => {
         <CardHeader>
           <CardTitle>Accept Invitation</CardTitle>
           <CardDescription>
-            You've been invited to join {invitation?.buildingName}
-            {invitation?.unitNumber && ` - Unit ${invitation.unitNumber}`}
+            You've been invited to join {invitation?.unitInfo.buildingName}
+            {invitation?.unitInfo.unitNumber && ` - Unit ${invitation.unitInfo.unitNumber}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,7 +165,7 @@ const AcceptInvitationPage = () => {
               <Input
                 id="email"
                 type="email"
-                value={invitation?.email || ''}
+                value={invitation?.inviteeEmail || ''}
                 disabled
                 className="bg-gray-100"
               />

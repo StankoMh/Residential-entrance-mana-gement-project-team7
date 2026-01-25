@@ -1,71 +1,69 @@
 import { api } from '../config/api';
 
-export interface InvitationRequest {
-  email: string;
+export interface CreateInvitationRequest {
   unitId: number;
-  role?: string;
+  inviteeEmail: string;
 }
 
 export interface InvitationResponse {
   id: number;
-  email: string;
-  token: string;
-  invitationLink: string;
-  status: string;
+  inviteeEmail: string;
+  invitationCode: string;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
   expiresAt: string;
   createdAt: string;
+  acceptedAt: string | null;
+  unitInfo: {
+    id: number;
+    unitNumber: number;
+    buildingName: string;
+  };
+  createdByInfo: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
-export interface AcceptInvitationRequest {
-  token: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-}
-
-export interface InvitationValidationResponse {
-  valid: boolean;
+export interface ValidateInvitationRequest {
+  invitationCode: string;
   email: string;
-  unitNumber?: string;
-  buildingName?: string;
-  expired?: boolean;
-  alreadyUsed?: boolean;
 }
 
 const invitationService = {
-  // Create a new invitation (admin only)
-  createInvitation: async (data: InvitationRequest): Promise<InvitationResponse> => {
+  // Create a new invitation
+  createInvitation: async (data: CreateInvitationRequest): Promise<InvitationResponse> => {
     const response = await api.post('/invitations', data);
     return response.data;
   },
 
-  // Validate an invitation token
-  validateInvitation: async (token: string): Promise<InvitationValidationResponse> => {
-    const response = await api.get(`/invitations/validate/${token}`);
+  // Validate an invitation
+  validateInvitation: async (invitationCode: string, email: string): Promise<InvitationResponse> => {
+    const response = await api.post('/invitations/validate', { invitationCode, email });
     return response.data;
   },
 
-  // Accept an invitation and create account
-  acceptInvitation: async (data: AcceptInvitationRequest): Promise<void> => {
-    const response = await api.post('/invitations/accept', data);
+  // Accept an invitation
+  acceptInvitation: async (invitationCode: string): Promise<InvitationResponse> => {
+    const response = await api.post(`/invitations/${invitationCode}/accept`);
     return response.data;
   },
 
-  // Get all invitations for a building (admin only)
-  getInvitationsByBuilding: async (buildingId: number): Promise<InvitationResponse[]> => {
-    const response = await api.get(`/invitations/building/${buildingId}`);
+  // Get invitations by unit
+  getInvitationsByUnit: async (unitId: number): Promise<InvitationResponse[]> => {
+    const response = await api.get(`/invitations/unit/${unitId}`);
     return response.data;
   },
 
-  // Resend an invitation
-  resendInvitation: async (invitationId: number): Promise<InvitationResponse> => {
-    const response = await api.post(`/invitations/${invitationId}/resend`);
+  // Get my pending invitations
+  getMyPendingInvitations: async (): Promise<InvitationResponse[]> => {
+    const response = await api.get('/invitations/my-pending');
     return response.data;
   },
 
-  // Cancel/revoke an invitation
-  cancelInvitation: async (invitationId: number): Promise<void> => {
+  // Revoke an invitation
+  revokeInvitation: async (invitationId: number): Promise<void> => {
     await api.delete(`/invitations/${invitationId}`);
   },
 };

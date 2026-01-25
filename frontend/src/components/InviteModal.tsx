@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { sendInvite } from '../services/inviteService';
+import { createInvitation } from '../services/inviteService';
 
 interface InviteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  apartmentId: string;
-  apartmentName?: string;
+  unitId: number;
+  unitName?: string;
 }
 
-const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, apartmentId, apartmentName }) => {
+const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, unitId, unitName }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,8 +21,8 @@ const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, apartmentId,
     setSuccess('');
 
     try {
-      const response = await sendInvite({ email, apartmentId });
-      setSuccess(response.message || 'Invite sent successfully!');
+      const response = await createInvitation({ unitId, inviteeEmail: email });
+      setSuccess(`Invitation sent successfully! Code: ${response.invitationCode}`);
       setEmail('');
       setTimeout(() => {
         onClose();
@@ -41,7 +41,7 @@ const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, apartmentId,
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-semibold mb-4">
-          Send Invite {apartmentName && `for ${apartmentName}`}
+          Send Invite {unitName && `for ${unitName}`}
         </h2>
         
         <form onSubmit={handleSubmit}>

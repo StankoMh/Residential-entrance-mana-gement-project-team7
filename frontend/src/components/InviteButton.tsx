@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import InviteModal from './InviteModal';
 
 interface InviteButtonProps {
-  apartmentId: string;
-  apartmentName?: string;
+  unitId: number;
+  unitName?: string;
   className?: string;
 }
 
-const InviteButton: React.FC<InviteButtonProps> = ({ apartmentId, apartmentName, className }) => {
+const InviteButton: React.FC<InviteButtonProps> = ({ unitId, unitName, className }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -21,12 +21,12 @@ const InviteButton: React.FC<InviteButtonProps> = ({ apartmentId, apartmentName,
         </svg>
         Invite
       </button>
-      
+
       <InviteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        apartmentId={apartmentId}
-        apartmentName={apartmentName}
+        unitId={unitId}
+        unitName={unitName}
       />
     </>
   );
