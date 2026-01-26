@@ -1,10 +1,11 @@
-import { Search, Mail, MapPin, MoreVertical, Edit2, Copy, CheckCircle2, Users as UsersIcon, Ruler, AlertTriangle, Check, X, UserCog } from 'lucide-react';
+import { Search, Mail, MapPin, MoreVertical, Edit2, Copy, CheckCircle2, Users as UsersIcon, Ruler, AlertTriangle, Check, X, UserCog, UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { unitService, type UnitResponseFromAPI } from '../services/unitService';
 import { toast } from 'sonner';
 import { useSelection } from '../contexts/SelectionContext';
 import { buildingService } from '../services/buildingService';
 import { authService } from '../services/authService';
+import InviteModal from '../src/components/InviteModal';
 
 export function ApartmentsManagement() {
   const { selectedBuilding } = useSelection();
@@ -16,6 +17,7 @@ export function ApartmentsManagement() {
   const [editingUnit, setEditingUnit] = useState<UnitResponseFromAPI | null>(null);
   const [formData, setFormData] = useState({ area: 0, residentsCount: 0 });
   const [isSaving, setIsSaving] = useState(false);
+  const [invitingUnit, setInvitingUnit] = useState<UnitResponseFromAPI | null>(null);
 
   useEffect(() => {
     if (selectedBuilding) {
@@ -65,6 +67,11 @@ export function ApartmentsManagement() {
     console.log('Редактиране на:', unit);
     setEditingUnit(unit);
     setFormData({ area: unit.area || 0, residentsCount: unit.residents || 0 });
+    setOpenMenuId(null);
+  };
+
+  const handleInvite = (unit: UnitResponseFromAPI) => {
+    setInvitingUnit(unit);
     setOpenMenuId(null);
   };
 
@@ -308,6 +315,13 @@ export function ApartmentsManagement() {
                                 <Edit2 className="w-4 h-4" />
                                 Редактирай
                               </button>
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                onClick={() => handleInvite(unit)}
+                              >
+                                <UserPlus className="w-4 h-4" />
+                                Покани жител
+                              </button>
                               {unit.isVerified === false && unit.ownerInfo && (
                                 <button
                                   className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
@@ -407,6 +421,19 @@ export function ApartmentsManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Модал за покана */}
+      {invitingUnit && (
+        <InviteModal
+          isOpen={true}
+          onClose={() => {
+            setInvitingUnit(null);
+            loadUnits(); // Reload units to show updated invitation status
+          }}
+          unitId={invitingUnit.id}
+          unitName={`Апартамент № ${invitingUnit.unitNumber}`}
+        />
       )}
     </div>
   );

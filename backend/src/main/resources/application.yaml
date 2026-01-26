@@ -2,6 +2,9 @@ spring:
   application:
     name: smart-entrance-backend
 
+  profiles:
+    active: dev  # Use 'dev' profile for local development (mock emails)
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -34,7 +37,9 @@ spring:
           auth: true
           starttls:
             enable: true
+    enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:noreply@smartentrance.com}
+    
 
 application:
   security:
@@ -45,7 +50,7 @@ application:
         expiration: 604800000  # 7 days (Long term)
       cookie-name: accessToken
       secure-cookie: false       # Set to true in production with HTTPS
-  base-url: http://localhost:8080
+  base-url: http://localhost:3000  # Frontend URL for invitation links
 
 payment:
   currency: EUR
