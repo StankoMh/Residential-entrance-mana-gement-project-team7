@@ -7,6 +7,8 @@ import com.smartentrance.backend.model.Invitation;
 import com.smartentrance.backend.model.Unit;
 import com.smartentrance.backend.model.User;
 import com.smartentrance.backend.model.enums.InvitationStatus;
+import com.smartentrance.backend.model.enums.UserRole;
+import com.smartentrance.backend.repository.BuildingRepository;
 import com.smartentrance.backend.repository.InvitationRepository;
 import com.smartentrance.backend.repository.UnitRepository;
 import com.smartentrance.backend.repository.UserRepository;
@@ -14,9 +16,10 @@ import com.smartentrance.backend.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,14 +34,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @Transactional
 class InvitationControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
-    private ObjectMapper objectMapper;
+    private BuildingRepository buildingRepository;
 
     @Autowired
     private InvitationRepository invitationRepository;
@@ -49,7 +55,7 @@ class InvitationControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @MockBean
+    @MockitoBean
     private EmailService emailService;
 
     private Unit unit;
@@ -58,23 +64,29 @@ class InvitationControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        Building building = Building.builder()
-                .name("Test Building")
-                .build();
+        manager = userRepository.save(
+                User.builder()
+                        .email("manager@example.com")
+                        .firstName("John")
+                        .lastName("Doe")
+                        .role(UserRole.ADMIN)
+                        .hashedPassword("hashed_password_123")
+                        .build()
+        );
+
+        Building building = buildingRepository.save(
+                Building.builder()
+                        .name("Test Building")
+                        .totalUnits(10)
+                        .manager(manager)
+                        .build()
+        );
 
         unit = unitRepository.save(
                 Unit.builder()
                         .unitNumber(101)
                         .accessCode("ABC123")
                         .building(building)
-                        .build()
-        );
-
-        manager = userRepository.save(
-                User.builder()
-                        .email("manager@example.com")
-                        .firstName("John")
-                        .lastName("Doe")
                         .build()
         );
 

@@ -1,0 +1,61 @@
+
+TO: asd2@test.com
+FROM: noreply@smartentrance.com
+SUBJECT: Invitation to a - Unit 1
+
+═══════════════════════════════════════════════════════════════
+                    YOU'RE INVITED!
+═══════════════════════════════════════════════════════════════
+
+Hello,
+
+You have been invited to join a as a resident of Unit 1.
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│               YOUR INVITATION CODE                          │
+│                                                             │
+│                     J7P5GZWY                          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+This invitation code will allow you to:
+  ✓ Register a new account if you don't have one
+  ✓ Access the building management system
+  ✓ Manage your unit and participate in building activities
+
+──────────────────────────────────────────────────────────────
+
+TO ACCEPT THIS INVITATION:
+
+Option 1 - Register (if you don't have an account):
+  POST http://localhost:3000/api/auth/register
+  {
+    "firstName": "Your Name",
+    "lastName": "Your Last Name",
+    "email": "asd2@test.com",
+    "password": "your-password",
+    "invitationCode": "J7P5GZWY"
+  }
+
+Option 2 - Login (if you already have an account):
+  POST http://localhost:3000/api/auth/login
+  {
+    "email": "asd2@test.com",
+    "password": "your-password",
+    "invitationCode": "J7P5GZWY"
+  }
+
+Option 3 - Accept via Web:
+  http://localhost:3000/accept-invitation?code=J7P5GZWY&email=asd2@test.com
+
+──────────────────────────────────────────────────────────────
+
+This invitation expires in 7 days.
+
+If you have any questions, please contact your building manager.
+
+═══════════════════════════════════════════════════════════════
+This is an automated message from Smart Entrance System (DEV MODE)
+═══════════════════════════════════════════════════════════════
+

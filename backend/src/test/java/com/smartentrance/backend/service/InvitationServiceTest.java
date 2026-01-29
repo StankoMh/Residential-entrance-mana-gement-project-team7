@@ -53,7 +53,7 @@ class InvitationServiceTest {
     @BeforeEach
     void setUp() {
         building = Building.builder()
-                .id(1L)
+                .id(1)
                 .name("Test Building")
                 .build();
 

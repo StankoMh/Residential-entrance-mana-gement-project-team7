@@ -26,14 +26,14 @@ class AuthControllerIntegrationTest {
 
     @Test
     void testRegisterAndLogin() throws Exception {
-        UserRegisterRequest reg = new UserRegisterRequest("Test", "User", "test@test.com", "123456", false);
+        UserRegisterRequest reg = new UserRegisterRequest("Test", "User", "test@test.com", "123456", false, null);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
                 .andExpect(status().isCreated());
 
-        LoginRequest login = new LoginRequest("test@test.com", "123456", true);
+        LoginRequest login = new LoginRequest("test@test.com", "123456", true, null);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

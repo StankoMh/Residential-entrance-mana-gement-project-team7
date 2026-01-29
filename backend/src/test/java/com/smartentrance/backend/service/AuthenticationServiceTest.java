@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.Authentication;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -55,23 +55,23 @@ class AuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        registerRequest = new UserRegisterRequest();
-        registerRequest.setEmail("invitee@example.com");
-        registerRequest.setPassword("password123");
-        registerRequest.setInvitationCode("ABC123");
-        registerRequest.setRememberMe(false);
+        registerRequest = new UserRegisterRequest(
+                "First",
+                "Last",
+                "invitee@example.com",
+                "password123",
+                false,
+                "ABC123"
+        );
 
         user = User.builder()
                 .id(1L)
                 .email("invitee@example.com")
                 .build();
 
-        userResponse = new UserResponse(
-                1L,
-                "invitee@example.com",
-                null,
-                null
-        );
+        userResponse = new UserResponse();
+        userResponse.setId(1L);
+        userResponse.setEmail("invitee@example.com");
     }
 
     @Test
